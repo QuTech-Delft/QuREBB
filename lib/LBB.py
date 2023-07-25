@@ -18,7 +18,7 @@ def EmissionOnePhotonSPI(dm_in, spin_name, photon_name, dim=2):
     
     #define building block
     
-    emitter = pbb.emitter_pi_pulse(dim=dim)
+    emitter = pbb.spontaneous_emission_ideal(dim=dim)
     emitter.rename('spin', spin_name)
     emitter.rename('photon', photon_name)
     
@@ -29,8 +29,8 @@ def EmissionOnePhotonSPI(dm_in, spin_name, photon_name, dim=2):
 def EmissionOnePhotonSPINonIdeal(dm_in, protocol_params, spin_name, photon_name, incoherent_name, dim=2):
     #define building block
     #cavity params must be [kappa_in, kappa_loss, gamma, g or C]
-    kappa_r=protocol_params['kappa_in']
-    kappa_t=protocol_params['kappa_loss']
+    kappa_in=protocol_params['kappa_in']
+    kappa_loss=protocol_params['kappa_loss']
     gamma=protocol_params['gamma']
 
     
@@ -50,21 +50,21 @@ def EmissionOnePhotonSPINonIdeal(dm_in, protocol_params, spin_name, photon_name,
         print('no C or g found in parameters. Using defaulr C=0.01')
         C=0.01
 
-    p_coh, p_incoh, p_2ph, p_loss = qom.cavity_enhanced_incoherent_emission(kappa_r, kappa_t, gamma, gamma_dephasing, DW*QE, C)
+    p_coh, p_incoh, p_2ph, p_loss = qom.cavity_enhanced_spontaneous_emission(kappa_in, kappa_loss, gamma, gamma_dephasing, DW*QE, C)
      
-    c_coh = pbb.emitter_pi_pulse(dim=dim)
+    c_coh = pbb.spontaneous_emission_ideal(dim=dim)
     c_coh.rename('spin', spin_name)
     c_coh.rename('photon', photon_name)
 
-    c_loss = pbb.emitter_error(dim=dim)
+    c_loss = pbb.spontaneous_emission_error(dim=dim)
     c_loss.rename('spin', spin_name)
     c_loss.rename('photon', 'loss')
 
-    c_incoh = pbb.emitter_error(dim=dim)
+    c_incoh = pbb.spontaneous_emission_error(dim=dim)
     c_incoh.rename('spin', spin_name)
     c_incoh.rename('photon', incoherent_name)
 
-    c_2ph = pbb.emitter_twophoton_error(dim=dim)
+    c_2ph = pbb.spontaneous_two_photon_emission(dim=dim)
     c_2ph.rename('spin', spin_name)
     c_2ph.rename('photon', photon_name)
 
@@ -77,11 +77,11 @@ def EmissionOnePhotonSPINonIdeal(dm_in, protocol_params, spin_name, photon_name,
 def EmissionTimeBinSPI(dm_in, spin_name, photon_names, dim=2, **kwargs):
     
     #define building block    
-    emitter_E = pbb.emitter_pi_pulse(dim=dim)
+    emitter_E = pbb.spontaneous_emission_ideal(dim=dim)
     emitter_E.rename('spin', spin_name)
     emitter_E.rename('photon', photon_names[0])
     
-    emitter_L = emitter_pi_pulse(dim=dim)
+    emitter_L = spontaneous_emission_ideal(dim=dim)
     emitter_L.rename('spin', spin_name)
     emitter_L.rename('photon', photon_names[1])
     
@@ -131,26 +131,31 @@ def CavityTimeBinSPI(dm_in, spin_name=None, photon_names=None, parameters=None, 
         t_u, r_u, l_u = qom.cavity_qom_cavity_centered(f_oper, delta, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=gamma_dephasing)
         t_d, r_d, l_d = qom.cavity_qom_cavity_centered(f_oper, delta-splitting, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=gamma_dephasing)
 
-    loss_u = np.sqrt(np.abs(t_u)**2 + np.abs(l_u)**2)
-    loss_d = np.sqrt(np.abs(t_d)**2 + np.abs(l_d)**2)
+    # loss_u = np.sqrt(np.abs(t_u)**2 + np.abs(l_u)**2)
+    # loss_d = np.sqrt(np.abs(t_d)**2 + np.abs(l_d)**2)
 
-    cav = pbb.cavity_single_sided_unitary(r_u, loss_u, r_d, loss_d , dim=dim)
+    cav = pbb.conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d , dim=dim)
     cav.rename('spin', spin_name)
 
     #Apply early
     cav.rename('R'   , photon_names[0] )
+    cav.rename('T', 'loss_transmission1')
     cav.rename('loss', 'loss1')
 
     dm_E_full = cav*dm_in*cav.dag()
+
+    #This traces out also the transmission channel
     dm_E = nq.trace_out_loss_modes(dm_E_full)
 
     #Flip spin and scatter late
     RX_pi  = nq.NQobj([[0, -1j], [-1j, 0]], names=spin_name)
     cav.rename(photon_names[0]   , photon_names[1]    )
+    cav.rename('loss_transmission1', 'loss_transmission2')
     cav.rename('loss1', 'loss2')
     
     dm_L_full = cav * (RX_pi * dm_E * RX_pi.dag()) * cav.dag()
-    #dm_L_full = RX_pi * (cav * (RX_pi * dm_E * RX_pi.dag()) * cav.dag() ) * RX_pi.dag()
+
+    #This traces out also the transmission channel
     dm_L = nq.trace_out_loss_modes(dm_L_full)
     
     return dm_L
@@ -190,13 +195,13 @@ def CavityPhaseSPI(dm_in, spin_name=None, photon_names=None, parameters=None, di
     loss_off = np.sqrt(np.abs(t_off)**2 + np.abs(l_off)**2) #np.sqrt(1-np.abs(r_d)**2) #np.sqrt(t_d**2 + l_d**2)
 
     #For R-polarised light the cavity response is spin dependent (ON for up and OFF for down)
-    cav_R = pbb.cavity_single_sided_unitary(r_on, loss_on, r_off, loss_off, dim=dim)   
+    cav_R = pbb.conditional_phase_reflection(r_on, loss_on, r_off, loss_off, dim=dim)   
     cav_R.rename('spin', spin_name)
     cav_R.rename('R', photon_names[0])
     cav_R.rename('loss', 'loss1')
 
     #For L-polarised light the cavity is always off
-    cav_L = pbb.cavity_single_sided_unitary(r_off, loss_off, r_off, loss_off, dim=dim)   
+    cav_L = pbb.conditional_phase_reflection(r_off, loss_off, r_off, loss_off, dim=dim)   
     cav_L.rename('spin', spin_name)
     cav_L.rename('R', photon_names[1])
     cav_L.rename('loss', 'loss2')
