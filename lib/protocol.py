@@ -1,18 +1,18 @@
+import datetime
 import functools
 import itertools
 import multiprocessing as multi
 import time
+from copy import copy
+from os.path import join
 from typing import List, Optional
 
 import numpy as np
-import xarray as xr
-from copy import copy
-import datetime
-import lib.NQobj as nq
 import qutip as qt
-from os.path import join
+import xarray as xr
 
 import lib.LBB as lbb
+import lib.NQobj as nq
 
 qt.settings.auto_tidyup = False
 

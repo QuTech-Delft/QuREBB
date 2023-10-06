@@ -396,7 +396,6 @@ def fidelity(A, B):
 
 import qutip.settings as settings
 from qutip.cy.spconvert import arr_coo2fast, cy_index_permute
-
 # To support the _permute2 function
 from qutip.permute import _permute
 

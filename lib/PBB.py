@@ -3,8 +3,8 @@ import math
 import numpy as np
 import qutip as qt
 
-import lib.states as st
 import lib.NQobj as nq
+import lib.states as st
 
 
 def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):

@@ -1,9 +1,9 @@
 import qutip as qt
 
 import lib.LBB as lbb
-from lib.PBB import no_vacuum_projector
 import lib.NQobj as nq
 import lib.states as st
+from lib.PBB import no_vacuum_projector
 from lib.protocol import Protocol
 
 
