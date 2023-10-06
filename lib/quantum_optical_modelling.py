@@ -1,17 +1,7 @@
 import numpy as np
 
 
-def cavity_qom(
-    delta_al,
-    delta_ac,
-    delta_cl,
-    kappa_r,
-    kappa_t,
-    kappa_loss,
-    gamma,
-    C,
-    gamma_dephasing=0,
-):
+def cavity_qom(delta_al, delta_ac, delta_cl, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=0):
     """
     Generic quantum optical model of cavity. Ref?
 
@@ -36,26 +26,14 @@ def cavity_qom(
 
     C_eff = C  # /(1+2*delta_ac**2/kappa_tot**2)
 
-    r = 1 - kappa_r / kappa_tot / (
-        -1j * delta_cl / kappa_tot + 0.5 + C_eff / (-1j * delta_al / gamma_tot + 0.5)
-    )
-    t = (
-        kappa_t
-        / kappa_tot
-        / (
-            -1j * delta_cl / kappa_tot
-            + 0.5
-            + C_eff / (-1j * delta_al / gamma_tot + 0.5)
-        )
-    )
+    r = 1 - kappa_r / kappa_tot / (-1j * delta_cl / kappa_tot + 0.5 + C_eff / (-1j * delta_al / gamma_tot + 0.5))
+    t = kappa_t / kappa_tot / (-1j * delta_cl / kappa_tot + 0.5 + C_eff / (-1j * delta_al / gamma_tot + 0.5))
     l = np.sqrt(1 - np.abs(t) ** 2 - np.abs(r) ** 2)
 
     return t, r, l
 
 
-def cavity_qom_atom_centered(
-    omega, delta, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=0
-):
+def cavity_qom_atom_centered(omega, delta, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=0):
     """
     Implementation of the cavity centered on atom frequency.
 
@@ -92,9 +70,7 @@ def cavity_qom_atom_centered(
     return t, r, l
 
 
-def cavity_qom_cavity_centered(
-    omega, delta, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=0
-):
+def cavity_qom_cavity_centered(omega, delta, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=0):
     """
     Implementation of the cavity centered on cavity frequency.
 
@@ -131,9 +107,7 @@ def cavity_qom_cavity_centered(
     return t, r, l
 
 
-def cavity_qom_atom_centered_controlled(
-    omega, delta, kappa_r, kappa_t, kappa_loss, gamma, C, N=0, gamma_dephasing=0
-):
+def cavity_qom_atom_centered_controlled(omega, delta, kappa_r, kappa_t, kappa_loss, gamma, C, N=0, gamma_dephasing=0):
     """
     Implementation of the cavity centered on cavity frequency.
     Cooperativity scales with number of atoms coupled.
@@ -172,9 +146,7 @@ def cavity_qom_atom_centered_controlled(
     return t, r, l
 
 
-def cavity_enhanced_spontaneous_emission(
-    kappa_in, kappa_loss, gamma, gamma_dephasing, DW, C
-):
+def cavity_enhanced_spontaneous_emission(kappa_in, kappa_loss, gamma, gamma_dephasing, DW, C):
     """
     Quantum optical modeling of cavity enhanced spontaneous emission.
     Formulas are reported in Appendix D of the reference article.

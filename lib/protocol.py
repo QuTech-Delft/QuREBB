@@ -16,6 +16,7 @@ import lib.LBB as lbb
 
 qt.settings.auto_tidyup = False
 
+
 class Protocol:
     """
     This class handles a two-qubit entanglement protocol,
@@ -40,8 +41,8 @@ class Protocol:
         self.dm: nq.NQobj = None
         self.dm_init: nq.NQobj = None
         self.dm_heralded: List[nq.NQobj] = None
-        if "dim" in parameters: # photonic size as attribute for convenience
-            self.dim = parameters['dim']
+        if "dim" in parameters:  # photonic size as attribute for convenience
+            self.dim = parameters["dim"]
         else:
             raise ValueError("The entry 'dim' needs to be present in parameters")
 
@@ -68,10 +69,7 @@ class Protocol:
         """Makes a logical building block act on the density matrix."""
         kwargs.update(self.parameters)
 
-        self.dm = LBB(
-            dm_in = self.dm,
-            **kwargs
-        )
+        self.dm = LBB(dm_in=self.dm, **kwargs)
 
     def do_lbb_on_photons(self, LBB, photon_names, **kwargs):
         for photon_name in photon_names:
@@ -104,27 +102,21 @@ class Protocol:
         rate = self.dm.tr()
         return fidelity, rate
 
+
 class ProtocolSweep:
-      
     def __init__(
-        self, 
-        protocol, 
-        parameters, 
-        sweep_parameters,
-        save_results = False,
-        save_folder = None,
-        save_name = "dataset"
-        ):
-        
+        self, protocol, parameters, sweep_parameters, save_results=False, save_folder=None, save_name="dataset"
+    ):
+
         self.protocol = protocol
         self.parameters = parameters
         self.sweep_parameters = sweep_parameters
         self.save_results = save_results
         self.save_folder = save_folder
-        self.save_name = save_name     
+        self.save_name = save_name
         if save_results:
             if save_folder is None or save_name is None:
-                 raise ValueError("If save_result is True, save_folder and save_name can't be None.")
+                raise ValueError("If save_result is True, save_folder and save_name can't be None.")
         self.dataset = xr.Dataset()
         self.dataset_fidelity_rate = xr.Dataset()
 
@@ -143,11 +135,11 @@ class ProtocolSweep:
         data_array_size = [len(parameter_list) for parameter_list in parameter_lists]
         parameter_values_iter = itertools.product(*[list(array) for array in parameter_lists])
 
-        t0=time.time()
+        t0 = time.time()
         with multi.Pool() as processing_pool:
             results = processing_pool.starmap(wrap, parameter_values_iter)
-        t_sim=time.time() - t0
-        print('Sweep time with multi was {:.3f} s'.format(t_sim))
+        t_sim = time.time() - t0
+        print("Sweep time with multi was {:.3f} s".format(t_sim))
 
         fidelity = np.array([x[0] for x in results]).reshape(data_array_size)
         rate = np.array([x[1] for x in results]).reshape(data_array_size)
@@ -157,10 +149,7 @@ class ProtocolSweep:
     def run(self):
         sweep_parameter_names = list(self.sweep_parameters.keys())
         fidelity, rate = self.multiprocess_sweep()
-        data_vars = {
-            "fidelity": (sweep_parameter_names, fidelity), 
-            "rate": (sweep_parameter_names, rate)
-            }
+        data_vars = {"fidelity": (sweep_parameter_names, fidelity), "rate": (sweep_parameter_names, rate)}
         parameters = copy(self.parameters)
         for parameter in self.sweep_parameters:
             parameters.pop(parameter)
@@ -172,13 +161,13 @@ class ProtocolSweep:
         date_time = self._generate_date_time()
         file_path = join(self.save_folder, date_time + self.save_name + ".hdf5")
         # Invalid_netcdf is used to be able to save None and bools as attrs
-        self.dataset.to_netcdf(file_path, engine='h5netcdf', invalid_netcdf=True)
+        self.dataset.to_netcdf(file_path, engine="h5netcdf", invalid_netcdf=True)
 
     def save_dataset_fidelity_rate(self):
         date_time = self._generate_date_time()
         file_path = join(self.save_folder, f"{date_time}{self.save_name}_fidelity_rate.hdf5")
         # Invalid_netcdf is used to be able to save None and bools as attrs
-        self.dataset.to_netcdf(file_path, engine='h5netcdf', invalid_netcdf=True) 
+        self.dataset.to_netcdf(file_path, engine="h5netcdf", invalid_netcdf=True)
 
     def _generate_date_time(self):
         time_stamp = datetime.datetime.now()
@@ -211,15 +200,15 @@ class ProtocolSweep:
             rmax = float(self.dataset.rate.max())
         if type_axis == "log":
             rates = np.logspace(rmin, rmax, n)
-        elif type_axis == 'lin':
+        elif type_axis == "lin":
             rates = np.linspace(rmin, rmax, n)
         else:
-            raise ValueError('type_axis should be lin or log')
-        
+            raise ValueError("type_axis should be lin or log")
+
         fidelities = []
         for rate in rates:
-            rate_above_bound = (self.dataset.fidelity == self.dataset.fidelity.where(self.dataset.rate >= rate).max())
-            fidelity = self.dataset.fidelity.groupby(rate_above_bound)[True][0] # select only single value
+            rate_above_bound = self.dataset.fidelity == self.dataset.fidelity.where(self.dataset.rate >= rate).max()
+            fidelity = self.dataset.fidelity.groupby(rate_above_bound)[True][0]  # select only single value
             for coord in fidelity.coords:
                 if "stacked" in coord:
                     fidelity = fidelity.reset_coords(coord, drop=True)
@@ -229,4 +218,3 @@ class ProtocolSweep:
 
 def load_dataset(path):
     return xr.load_dataset(path, engine="h5netcdf")
-

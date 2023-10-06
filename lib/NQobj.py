@@ -53,9 +53,7 @@ class NQobj(qt.Qobj):
             if len(names) == 2 and type(names[0]) == list and type(names[1]) == list:
                 if not all(type(i) == str for i in names[0] + names[1]):
                     raise ValueError("A name must be a string.")
-                elif len(names[0]) != len(set(names[0])) or len(names[1]) != len(
-                    set(names[1])
-                ):
+                elif len(names[0]) != len(set(names[0])) or len(names[1]) != len(set(names[1])):
                     raise ValueError("Do not use duplicate names.")
                 elif not (len(names[0]), len(names[1])) == self.shape_dims:
                     raise ValueError("The number of names must match the shape_dims.")
@@ -65,17 +63,12 @@ class NQobj(qt.Qobj):
                     raise ValueError("A name must be a string.")
                 elif not len(names) == len(set(names)):
                     raise ValueError("Do not use duplicate names.")
-                elif not (
-                    len(names) == self.shape_dims[0]
-                    and len(names) == self.shape_dims[1]
-                ):
+                elif not (len(names) == self.shape_dims[0] and len(names) == self.shape_dims[1]):
                     raise ValueError("The number of names must match the shape_dims.")
                 self.names = [names, names]
         elif type(names) == str:
             if not self.shape_dims == (1, 1):
-                raise ValueError(
-                    "Names can only be a string if there shape_dims is (1, 1)."
-                )
+                raise ValueError("Names can only be a string if there shape_dims is (1, 1).")
             self.names = [[names], [names]]
         else:
             raise TypeError("names should be a string or 1d or 2d list ")
@@ -110,30 +103,18 @@ class NQobj(qt.Qobj):
         """
         if isinstance(other, NQobj):
             if not self.type == other.type:
-                raise ValueError(
-                    "Addition and substraction are only allowed for two NQobj of the same type."
-                )
+                raise ValueError("Addition and substraction are only allowed for two NQobj of the same type.")
             elif not self.kind == other.kind:
-                raise ValueError(
-                    "Addition and substraction are only allowed for two NQobj of the same kind."
-                )
+                raise ValueError("Addition and substraction are only allowed for two NQobj of the same kind.")
             elif self.isket or self.isbra or self.isoper:
                 names = _add_find_required_names(self, other)
                 missing_self = _find_missing_names(self.names, names)
                 missing_other = _find_missing_names(other.names, names)
-                missing_dict_self = _find_missing_dict( 
-                    missing_self, other, transpose=False
-                )
-                missing_dict_other = _find_missing_dict(
-                    missing_other, self, transpose=False
-                )
-                self = _adding_missing_modes(
-                    self, missing_dict_self, names, kind=self.kind
-                )
+                missing_dict_self = _find_missing_dict(missing_self, other, transpose=False)
+                missing_dict_other = _find_missing_dict(missing_other, self, transpose=False)
+                self = _adding_missing_modes(self, missing_dict_self, names, kind=self.kind)
                 self = self.permute(names)
-                other = _adding_missing_modes(
-                    other, missing_dict_other, names, kind=other.kind
-                )
+                other = _adding_missing_modes(other, missing_dict_other, names, kind=other.kind)
                 other = other.permute(names)
                 Qobj_result = super(NQobj, self).__add__(other)
                 return NQobj(Qobj_result, names=names, kind=self.kind)
@@ -152,13 +133,9 @@ class NQobj(qt.Qobj):
             missing_other = _find_missing_names(other.names, names_other)
             missing_dict_self = _find_missing_dict(missing_self, other, transpose=True)
             missing_dict_other = _find_missing_dict(missing_other, self, transpose=True)
-            self = _adding_missing_modes(
-                self, missing_dict_self, names_self, kind=self.kind
-            )
+            self = _adding_missing_modes(self, missing_dict_self, names_self, kind=self.kind)
             self = self.permute(names_self)
-            other = _adding_missing_modes(
-                other, missing_dict_other, names_other, kind=other.kind
-            )
+            other = _adding_missing_modes(other, missing_dict_other, names_other, kind=other.kind)
             other = other.permute(names_other)
             Qobj_result = super(NQobj, self).__mul__(other)
 
@@ -169,10 +146,7 @@ class NQobj(qt.Qobj):
                 names = [names_self[0], names_other[1]]
                 # Modes that have a size of (1, 1) have been reduced to a scalar and don't need a name anymore.
                 for name in names[0].copy():
-                    if (
-                        self._dim_of_name(name)[0] == 1
-                        and other._dim_of_name(name)[1] == 1
-                    ):
+                    if self._dim_of_name(name)[0] == 1 and other._dim_of_name(name)[1] == 1:
                         names[0].remove(name)
                         names[1].remove(name)
 
@@ -228,13 +202,7 @@ class NQobj(qt.Qobj):
         return NQobj(super().__pow__(n, m=m), names=self.names, kind=self.kind)
 
     def __str__(self):
-        return (
-            super().__str__()
-            + "\nnames: "
-            + self.names.__str__()
-            + "\nkind: "
-            + self.kind.__str__()
-        )
+        return super().__str__() + "\nnames: " + self.names.__str__() + "\nkind: " + self.kind.__str__()
 
     def _repr_latex_(self):
         """
@@ -326,9 +294,7 @@ class NQobj(qt.Qobj):
         elif new_name in self.names[0] + self.names[1]:
             raise ValueError("You cannot use a new_name which is already used.")
         elif name not in self.names[0] + self.names[1]:
-            raise ValueError(
-                "The name you want to replace is not present in the NQobj."
-            )
+            raise ValueError("The name you want to replace is not present in the NQobj.")
         else:
             for i in range(2):
                 try:
@@ -356,19 +322,14 @@ class NQobj(qt.Qobj):
         else:
             new_self = self.expand()
             new_self.permute([new_self.names[0], new_self.names[0]])
-            if (
-                new_self.names[0] == new_self.names[1]
-                and new_self.dims[0] == new_self.dims[1]
-            ):
+            if new_self.names[0] == new_self.names[1] and new_self.dims[0] == new_self.dims[1]:
                 return NQobj(
                     super(NQobj, new_self).expm(),
                     names=new_self.names,
                     kind=new_self.kind,
                 )
             else:
-                raise ValueError(
-                    "For exponentiation the matrix should have square submatrixes."
-                )
+                raise ValueError("For exponentiation the matrix should have square submatrixes.")
 
     @property
     def shape_dims(self):
@@ -377,22 +338,16 @@ class NQobj(qt.Qobj):
         return (shape_dims_0, shape_dims_1)
 
     def trans(self):
-        return NQobj(
-            super().trans(), names=[self.names[1], self.names[0]], kind=self.kind
-        )
+        return NQobj(super().trans(), names=[self.names[1], self.names[0]], kind=self.kind)
 
     def expand(self):
         if self.names[0] == self.names[1]:
             return self
         kind = self.kind
         required_names = self.names[0] + self.names[1]
-        required_names = list(
-            dict.fromkeys(required_names)
-        )  # Remove duplicates while keeping order (Python 3.7+)
+        required_names = list(dict.fromkeys(required_names))  # Remove duplicates while keeping order (Python 3.7+)
         missing = _find_missing_names(self.names, [required_names, required_names])
-        missing_dict = {
-            name: self._dim_of_name(name) for name in missing[0] + missing[1]
-        }
+        missing_dict = {name: self._dim_of_name(name) for name in missing[0] + missing[1]}
         names = deepcopy(self.names)
         for name, dims in missing_dict.items():
             if dims[0] is None:
@@ -415,9 +370,7 @@ def tensor(*args):
     q = qt.tensor(*args)
     kinds = np.array([q.kind for q in args])
     if not np.all(kinds == kinds[0]):
-        raise AttributeError(
-            "For tensor product the kind of all NQobj should be the same."
-        )
+        raise AttributeError("For tensor product the kind of all NQobj should be the same.")
     out = NQobj(q, names=names, kind=kinds[0])
     return out
 
@@ -443,6 +396,7 @@ def fidelity(A, B):
 
 import qutip.settings as settings
 from qutip.cy.spconvert import arr_coo2fast, cy_index_permute
+
 # To support the _permute2 function
 from qutip.permute import _permute
 
@@ -463,9 +417,7 @@ def _permute2(Q, order):
             ):
                 use_qutip = False
             else:
-                raise TypeError(
-                    "Order should be a list of int or a list of two list with int."
-                )
+                raise TypeError("Order should be a list of int or a list of two list with int.")
         elif Q.isbra or Q.isket:
             if all(type(i) == int for i in order):
                 use_qutip = True
@@ -514,21 +466,15 @@ def _permute2(Q, order):
 def _mul_find_required_names(Q_left, Q_right):
     # If a mode has the form of a ket in Q_left or a bra in Q_right they don't have to be matched between the objects
     # to perform the multiplication and are therefore not included in the required names for overlap.
-    names_Q_right_for_overlap = [
-        name for name in Q_right.names[0] if not Q_right._dim_of_name(name)[0] == 1
-    ]
-    names_Q_left_for_overlap = [
-        name for name in Q_left.names[1] if not Q_left._dim_of_name(name)[1] == 1
-    ]
+    names_Q_right_for_overlap = [name for name in Q_right.names[0] if not Q_right._dim_of_name(name)[0] == 1]
+    names_Q_left_for_overlap = [name for name in Q_left.names[1] if not Q_left._dim_of_name(name)[1] == 1]
 
     # Goal is to get a list with modes that need to appear in both objects to perform the multiplication, the overlap.
     if Q_right.kind == "state" and Q_left.kind == "oper":
         overlap = names_Q_right_for_overlap + names_Q_left_for_overlap
     else:
         overlap = names_Q_left_for_overlap + names_Q_right_for_overlap
-    overlap = list(
-        dict.fromkeys(overlap)
-    )  # Remove duplicates while keeping order (Python 3.7+)
+    overlap = list(dict.fromkeys(overlap))  # Remove duplicates while keeping order (Python 3.7+)
 
     # Make sure that the order of the names is matched for multiplication.
     names_Q_left = [overlap + names for names in Q_left.names]
@@ -585,9 +531,7 @@ def _adding_missing_modes(Q, dict_missing_modes, names, kind="oper"):
                     )
                 )
             elif dims[0] is None:
-                modes.append(
-                    NQobj(qt.basis(dims[1], 0).dag(), names=[[], [name]], kind="state")
-                )
+                modes.append(NQobj(qt.basis(dims[1], 0).dag(), names=[[], [name]], kind="state"))
             elif dims[1] is None:
                 modes.append(NQobj(qt.basis(dims[0], 0), names=name, kind="state"))
     return tensor(Q, *modes)

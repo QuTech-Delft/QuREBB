@@ -32,10 +32,10 @@ def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
     u = nq.name(st.up, "spin")
     d = nq.name(st.down, "spin")
 
-    L_u = np.abs(l_u)**2
+    L_u = np.abs(l_u) ** 2
     theta_loss_u = np.arctan(np.sqrt(L_u / (1 - L_u)))
-    r_prime_u = r_u/np.sqrt(1 - L_u)
-    t_prime_u = t_u/np.sqrt(1 - L_u)
+    r_prime_u = r_u / np.sqrt(1 - L_u)
+    t_prime_u = t_u / np.sqrt(1 - L_u)
     # t_prime_u, r_prime_u = r_prime_u, t_prime_u
     theta_splitting_u = np.arctan(t_prime_u / r_prime_u)
     cav_u = (
@@ -45,10 +45,10 @@ def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
         * (theta_loss_u * (r.dag() * l - r * l.dag())).expm()
     )
 
-    L_d = np.abs(l_d)**2
+    L_d = np.abs(l_d) ** 2
     theta_loss_d = np.arctan(np.sqrt(L_d / (1 - L_d)))
-    r_prime_d = r_d/np.sqrt(1 - L_d)
-    t_prime_d = t_d/np.sqrt(1 - L_d)
+    r_prime_d = r_d / np.sqrt(1 - L_d)
+    t_prime_d = t_d / np.sqrt(1 - L_d)
     # t_prime_d, r_prime_d = r_prime_d, t_prime_d
     theta_splitting_d = np.arctan(t_prime_d / r_prime_d)
     cav_d = (
@@ -181,6 +181,7 @@ def phase(theta=0, dim=2):
     """
     a = nq.name(qt.destroy(dim), "photon")
     return (1j * theta * a.dag() * a).expm()
+
 
 def no_vacuum_projector(name, dim):
     """

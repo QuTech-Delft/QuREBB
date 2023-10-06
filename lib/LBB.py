@@ -8,34 +8,26 @@ import lib.states as st
 
 # Covenience function for tracing out
 
+
 def trace_out_loss_modes(Q):
     loss_modes = [x for x in Q.names[0] if "loss" in x]
     return Q.ptrace(loss_modes, keep=False)
-    
+
+
 def trace_out_everything_but_spins(Q):
     classic_spin_names = ["spin", "Alice", "Bob", "Charlie", "alice", "bob", "charlie"]
     spin_modes = [x for x in Q.names[0] if x in classic_spin_names]
     return Q.ptrace(spin_modes)
 
+
 ###########
 ## SPIs  ##
 ###########
 
+
 def SpontaneousEmissionFockSPI(
-    dm_in,
-    spin_name,
-    photon_name,
-    dim,
-    kappa_in,
-    kappa_loss,
-    gamma,
-    g,
-    DW,
-    QE,
-    gamma_dephasing=0,
-    ideal=False,
-    **kw
-    ):
+    dm_in, spin_name, photon_name, dim, kappa_in, kappa_loss, gamma, g, DW, QE, gamma_dephasing=0, ideal=False, **kw
+):
 
     C = 4 * g**2 / (kappa_in + kappa_loss) / (gamma + gamma_dephasing)
 
@@ -62,22 +54,18 @@ def SpontaneousEmissionFockSPI(
     c_2ph.rename("spin", spin_name)
     c_2ph.rename("photon", photon_name)
     c = np.sqrt(p_coh) * c_coh + np.sqrt(p_loss) * c_loss
-    dm_out = (
-        c * dm_in * c.dag()
-        + p_incoh * c_incoh * dm_in * c_incoh.dag()
-        + p_2ph * c_2ph * dm_in * c_2ph.dag()
-    )
+    dm_out = c * dm_in * c.dag() + p_incoh * c_incoh * dm_in * c_incoh.dag() + p_2ph * c_2ph * dm_in * c_2ph.dag()
 
     return trace_out_loss_modes(dm_out)
 
 
 def ConditionalAmplitudeReflectionTimeBinSPI(
-    dm_in, 
+    dm_in,
     spin_name,
     photon_early_name,
     photon_late_name,
     dim,
-    atom_centered = True,
+    atom_centered=True,
     f_operation=None,
     kappa_r=None,
     kappa_t=None,
@@ -88,7 +76,7 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
     g=None,
     ideal=False,
     gamma_dephasing=0,
-    **kwargs
+    **kwargs,
 ):
 
     # cavity params must be [f, kappa_in, kappa_loss, gamma, delta, splitting, g]
@@ -101,14 +89,7 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
 
         if atom_centered:
             t_u, r_u, l_u = qom.cavity_qom_atom_centered(
-                f_operation,
-                -delta,
-                kappa_r,
-                kappa_t,
-                kappa_loss,
-                gamma,
-                C,
-                gamma_dephasing=gamma_dephasing,
+                f_operation, -delta, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=gamma_dephasing
             )
             t_d, r_d, l_d = qom.cavity_qom_atom_centered(
                 f_operation + splitting / 2,
@@ -123,24 +104,10 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
 
         else:
             t_u, r_u, l_u = qom.cavity_qom_cavity_centered(
-                f_operation,
-                delta,
-                kappa_r,
-                kappa_t,
-                kappa_loss,
-                gamma,
-                C,
-                gamma_dephasing=gamma_dephasing,
+                f_operation, delta, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=gamma_dephasing
             )
             t_d, r_d, l_d = qom.cavity_qom_cavity_centered(
-                f_operation,
-                delta - splitting,
-                kappa_r,
-                kappa_t,
-                kappa_loss,
-                gamma,
-                C,
-                gamma_dephasing=gamma_dephasing,
+                f_operation, delta - splitting, kappa_r, kappa_t, kappa_loss, gamma, C, gamma_dephasing=gamma_dephasing
             )
 
     cav = pbb.conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=dim)
@@ -154,12 +121,13 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
     dm_E = trace_out_loss_modes(dm_E_full)
 
     # Flip spin and scatter late
-    RX_pi = nq.NQobj([[0, 1], [1, 0]], names=spin_name, kind='oper')
+    RX_pi = nq.NQobj([[0, 1], [1, 0]], names=spin_name, kind="oper")
     cav.rename(photon_early_name, photon_late_name)
     dm_L_full = cav * (RX_pi * dm_E * RX_pi.dag()) * cav.dag()
     dm_L = trace_out_loss_modes(dm_L_full)
 
     return dm_L
+
 
 #######################
 ## Photon operations ##
@@ -208,6 +176,7 @@ def PhotonSourceTimeBin(dm_in, photon_early_name, photon_late_name, dim, alpha=N
     E = nq.name(photon_basis, photon_early_name, "state")
     L = nq.name(photon_basis, photon_late_name, "state")
     return nq.tensor(dm_in, nq.ket2dm((E + L).unit()))
+
 
 #################
 ##  Spin gates ##
