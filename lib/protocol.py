@@ -2,13 +2,19 @@ import functools
 import itertools
 import multiprocessing as multi
 import time
+from typing import List, Optional
 
 import numpy as np
 import xarray as xr
 from copy import copy
 import datetime
 import lib.NQobj as nq
+import qutip as qt
 from os.path import join
+
+import lib.LBB as lbb
+
+qt.settings.auto_tidyup = False
 
 class Protocol:
     """
@@ -33,24 +39,26 @@ class Protocol:
 
         self.dm: nq.NQobj = None
         self.dm_init: nq.NQobj = None
+        self.dm_heralded: List[nq.NQobj] = None
         if "dim" in parameters: # photonic size as attribute for convenience
             self.dim = parameters['dim']
         else:
             raise ValueError("The entry 'dim' needs to be present in parameters")
 
-        self.target_state: nq.NQobj = None  # target state of spins
-        self.herald_projector: nq.NQobj = None  # herald state of photon
+        self.target_states: List[nq.NQobj] = []  # target state of spins
+        self.herald_projectors: List[nq.NQobj] = []  # herald state of photon
 
-        self.photon_names: List[str] = None  # needed for convienent handling
-
-        self.fidelity = None
-        self.rate = None
+        self.fidelity: Optional[list] = None
+        self.fidelity_total: Optional[float] = None
+        self.rate: Optional[list] = None
+        self.rate_total: Optional[float] = None
 
     def run(self):
         """Runs the protocol sequence and return the metrics"""
         self.dm = self.dm_init
         self.protocol_sequence()
-        return self.metrics()
+        fidelity, rate = self.herald()
+        return fidelity, rate
 
     def protocol_sequence():
         """Defines the protocol sequence. Should be implemented by child class."""
@@ -69,16 +77,31 @@ class Protocol:
         for photon_name in photon_names:
             self.do_lbb(LBB, photon_name=photon_name, **kwargs)
 
-    def metrics(self, target_state=None):
+    def herald(self):
+        dm = copy(self.dm)
+        fidelity = []
+        rate = []
+        dm_heralded = []
+        for herald_projector, target_state in zip(self.herald_projectors, self.target_states):
+            self.do_lbb(lbb.Herald, herald_projector=herald_projector)
+            metrics = self.metrics(target_state)
+            fidelity.append(metrics[0])
+            rate.append(metrics[1])
+            dm_heralded.append(self.dm)
+            self.dm = copy(dm)
+        self.fidelity = fidelity
+        self.fidelity_total = np.average(np.array(fidelity), weights=np.array(rate))
+        self.rate = rate
+        self.rate_total = sum(rate)
+        self.dm_heralded = dm_heralded
+        return self.fidelity_total, self.rate_total
+
+    def metrics(self, target_state):
         """
         Calculates fidelity and success probability versus target spin state
         """
-        if target_state is None:
-            target_state = self.target_state
         fidelity = nq.fidelity(self.dm.unit(), nq.ket2dm(target_state)) ** 2
         rate = self.dm.tr()
-        self.fidelity = fidelity
-        self.rate = rate
         return fidelity, rate
 
 class ProtocolSweep:
@@ -148,7 +171,14 @@ class ProtocolSweep:
     def save_dataset(self):
         date_time = self._generate_date_time()
         file_path = join(self.save_folder, date_time + self.save_name + ".hdf5")
-        self.dataset.to_netcdf(file_path, engine='h5netcdf')
+        # Invalid_netcdf is used to be able to save None and bools as attrs
+        self.dataset.to_netcdf(file_path, engine='h5netcdf', invalid_netcdf=True)
+
+    def save_dataset_fidelity_rate(self):
+        date_time = self._generate_date_time()
+        file_path = join(self.save_folder, f"{date_time}{self.save_name}_fidelity_rate.hdf5")
+        # Invalid_netcdf is used to be able to save None and bools as attrs
+        self.dataset.to_netcdf(file_path, engine='h5netcdf', invalid_netcdf=True) 
 
     def _generate_date_time(self):
         time_stamp = datetime.datetime.now()
@@ -194,5 +224,9 @@ class ProtocolSweep:
                 if "stacked" in coord:
                     fidelity = fidelity.reset_coords(coord, drop=True)
             fidelities.append(fidelity.expand_dims("rate").assign_coords(rate=[rate]))
-        self.dataset_fidelity_rate = xr.combine_by_coords(fidelities)
-        
+        self.dataset_fidelity_rate = xr.combine_by_coords(fidelities).assign_attrs(self.dataset.attrs)
+
+
+def load_dataset(path):
+    return xr.load_dataset(path, engine="h5netcdf")
+

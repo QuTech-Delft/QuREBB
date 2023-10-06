@@ -441,23 +441,6 @@ def fidelity(A, B):
         return qt.fidelity(A, B.permute(A.names))
 
 
-## Convenience functions for tracing out
-
-
-def trace_out_loss_modes(Q):
-    loss_modes = [x for x in Q.names[0] if "loss" in x]
-    if len(loss_modes) != 0:
-        return Q.ptrace(loss_modes, keep=False)
-    else:
-        return Q
-
-
-def trace_out_everything_but_spins(Q):
-    classic_spin_names = ["Alice", "Bob", "Charlie", "alice", "bob", "charlie"]
-    spin_modes = [x for x in Q.names[0] if x in classic_spin_names]
-    return Q.ptrace(spin_modes)
-
-
 import qutip.settings as settings
 from qutip.cy.spconvert import arr_coo2fast, cy_index_permute
 # To support the _permute2 function

@@ -4,6 +4,18 @@ import qutip as qt
 import lib.NQobj as nq
 import lib.PBB as pbb
 import lib.quantum_optical_modelling as qom
+import lib.states as st
+
+# Covenience function for tracing out
+
+def trace_out_loss_modes(Q):
+    loss_modes = [x for x in Q.names[0] if "loss" in x]
+    return Q.ptrace(loss_modes, keep=False)
+    
+def trace_out_everything_but_spins(Q):
+    classic_spin_names = ["spin", "Alice", "Bob", "Charlie", "alice", "bob", "charlie"]
+    spin_modes = [x for x in Q.names[0] if x in classic_spin_names]
+    return Q.ptrace(spin_modes)
 
 ###########
 ## SPIs  ##
@@ -20,14 +32,12 @@ def SpontaneousEmissionFockSPI(
     g,
     DW,
     QE,
-    C=None,
     gamma_dephasing=0,
     ideal=False,
     **kw
     ):
 
-    if C is None:
-        C = 4 * g**2 / (kappa_in + kappa_loss) / (gamma + gamma_dephasing)
+    C = 4 * g**2 / (kappa_in + kappa_loss) / (gamma + gamma_dephasing)
 
     if ideal:
         p_coh, p_incoh, p_2ph, p_loss = 1, 0, 0, 0
@@ -58,7 +68,7 @@ def SpontaneousEmissionFockSPI(
         + p_2ph * c_2ph * dm_in * c_2ph.dag()
     )
 
-    return nq.trace_out_loss_modes(dm_out)
+    return trace_out_loss_modes(dm_out)
 
 
 def ConditionalAmplitudeReflectionTimeBinSPI(
@@ -78,7 +88,6 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
     g=None,
     ideal=False,
     gamma_dephasing=0,
-    C = None,
     **kwargs
 ):
 
@@ -88,8 +97,7 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
         t_d = r_u = 0
         l_u = l_d = 0
     else:
-        if C is None:
-            C = 4 * g**2 / (kappa_t + kappa_r + kappa_loss) / (gamma + gamma_dephasing)
+        C = 4 * g**2 / (kappa_t + kappa_r + kappa_loss) / (gamma + gamma_dephasing)
 
         if atom_centered:
             t_u, r_u, l_u = qom.cavity_qom_atom_centered(
@@ -143,13 +151,13 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
     cav.rename("T", "loss_transmission")
     cav.rename("loss", "loss")
     dm_E_full = cav * dm_in * cav.dag()
-    dm_E = nq.trace_out_loss_modes(dm_E_full)
+    dm_E = trace_out_loss_modes(dm_E_full)
 
     # Flip spin and scatter late
     RX_pi = nq.NQobj([[0, 1], [1, 0]], names=spin_name, kind='oper')
     cav.rename(photon_early_name, photon_late_name)
     dm_L_full = cav * (RX_pi * dm_E * RX_pi.dag()) * cav.dag()
-    dm_L = nq.trace_out_loss_modes(dm_L_full)
+    dm_L = trace_out_loss_modes(dm_L_full)
 
     return dm_L
 
@@ -191,9 +199,15 @@ def ModeLoss(dm_in, photon_name, loss, dim, ideal=False, **kwargs):
 ###############
 
 
-def SinglePhotonSource(dm_in, photon_name):
-    pass
-
+def PhotonSourceTimeBin(dm_in, photon_early_name, photon_late_name, dim, alpha=None, **kw):
+    """alpha is a bool and not none as this cant be saved as the attrs of a xarray dataset."""
+    if alpha is None:
+        photon_basis = st.photon(dim)
+    else:
+        photon_basis = qt.coherent(dim, alpha)
+    E = nq.name(photon_basis, photon_early_name, "state")
+    L = nq.name(photon_basis, photon_late_name, "state")
+    return nq.tensor(dm_in, nq.ket2dm((E + L).unit()))
 
 #################
 ##  Spin gates ##
@@ -217,7 +231,7 @@ def SpinPiY(dm_in, spin_name, **kwargs):
 
 def Herald(dm_in, herald_projector, **kw):
     dm_final = herald_projector * dm_in * herald_projector.dag()
-    return nq.trace_out_everything_but_spins(dm_final)
+    return trace_out_everything_but_spins(dm_final)
 
 
 ############################
@@ -230,18 +244,5 @@ def DarkCounts(dm_in, photon_name, dc_rate, dim, ideal=False, **kwargs):
     if ideal:
         dc_rate = 0
     a = nq.name(qt.destroy(dim), photon_name)
-    I = nq.name(qt.qeye(dim), photon_name, "oper")
 
     return (dc_rate) * (a.dag() * dm_in * a) + (1 - dc_rate) * dm_in
-
-
-def Phase(dm_in, protocol_params, photon_mode, dim=3):
-
-    try:
-        pha = protocol_params["phase"]
-    except:
-        pha = 0.0
-
-    phase_shifter = pbb.phase(pha, dim=dim)
-    phase_shifter.rename("photon", photon_mode)
-    return phase_shifter * dm_in * phase_shifter.dag()

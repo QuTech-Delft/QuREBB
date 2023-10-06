@@ -181,3 +181,11 @@ def phase(theta=0, dim=2):
     """
     a = nq.name(qt.destroy(dim), "photon")
     return (1j * theta * a.dag() * a).expm()
+
+def no_vacuum_projector(name, dim):
+    """
+    Physical Building Block to model the effect of detecting a photon, useful for heralding projectors.
+    """
+    identity = nq.name(qt.qeye(dim), name, "oper")
+    vacuum = nq.name(st.vacuum_dm(dim), name, "oper")
+    return identity - vacuum
