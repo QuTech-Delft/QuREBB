@@ -20,20 +20,19 @@ The structure is as follows:
 	  This file contain functions that return the unitary operator describing the quantum channel of a PBB.
 	  Some of the functions are stand alone, more complicated PBBs use the quantum_optical_modelling file for simulation of the hardware.
 	- LBB.py - 
-	  Similar in function to the PBB file, but here the functions of the PBB are used to build the LBB operators.
+	  Similar in function to the PBB file, but here the functions of the PBB are used to build the LBB quantum channels.
+	  These function take in a density matrix and return the updated one.
 	- protocol.py - 
 	  This file contains the class Protocol that is used to simulate the behaviour of a whole protocol.
+	  It also provides the class ProtocolSweep for sweeping values in the protocols for fidelity and rate optimization.
 	- states.py - 
-	  This file is for convenience and its use increases the readability of the code e.g. vacuum in stead of qt.basis(0,2)
+	  This file is for convenience and its use increases the readability of the code e.g. vacuum() in stead of qt.basis(0,2)
 
-- protocols - 
-	This folder contains implemented protocols 
+- protocols
+	- tutorial_protocols.py
+		The three protocols from the paper (A, B, C) are implemented in code in this file.
 
 # Dependencies 
 
-This repo requires the following packages to be installed
-- qutip
-- numpy
-- scipy
-- matplotlib
-- tqdm
+The dependencies are formulated in the pipenv file.
+Also the pipenv tool can be used to load the correct enviroment.

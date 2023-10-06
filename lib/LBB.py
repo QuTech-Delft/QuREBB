@@ -81,12 +81,14 @@ def conditional_amplitude_reflection_time_bin_spi(
     **kw,
 ):
 
-    # cavity params must be [f, kappa_in, kappa_loss, gamma, delta, splitting, g]
     if ideal:
         t_u = r_d = 1
         t_d = r_u = 0
         l_u = l_d = 0
     else:
+        if None in (f_operation, kappa_r, kappa_t, gamma, delta, splitting, g):
+            raise ValueError("In not ideal then f_operation, kappa_r, kappa_t, gamma, delta, splitting, g should all be defined.")
+
         C = 4 * g**2 / (kappa_t + kappa_r + kappa_loss) / (gamma + gamma_dephasing)
 
         if atom_centered:
@@ -136,7 +138,7 @@ def conditional_amplitude_reflection_time_bin_spi(
 #######################
 
 
-def HOM(dm_in, photon_names, dim, **kw):
+def hom(dm_in, photon_names, dim, **kw):
 
     hom_bs = pbb.unitary_beamsplitter(theta=np.pi / 4, dim=dim)
     hom_bs.rename("A", photon_names[0])
