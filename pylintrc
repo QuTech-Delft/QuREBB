@@ -23,7 +23,7 @@ disable=no-else-return,             # Rarely a helpful warning.
 # Allow underscores in class names.
 class-rgx=_?[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*
 
-good-names=i
+good-names=E,L,t,r,l,LBB,PBB,dm,R,T,L,A,B,u,d,I,L_u,L_d,C,DW,QE,NQobj,i,q,Q,g,a
 
 
 

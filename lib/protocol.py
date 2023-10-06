@@ -25,7 +25,8 @@ class Protocol:
     Attributes:
             name: (str) the protocol name.
             parmeters: (dict) dictionary containing the parameters necessary for protocol operation.
-            dim: (int) dimension of the photon space. Default is 3 as this is the minimum for using single photons and HOM interference.
+            dim: (int) dimension of the photon space.
+                Default is 3 as this is the minimum for using single photons and HOM interference.
 
     Additional arguments:
             photon_names: (list) list of names for the photonic modes. NB: should this be a mandatory attribute?
@@ -61,7 +62,7 @@ class Protocol:
         fidelity, rate = self.herald()
         return fidelity, rate
 
-    def protocol_sequence():
+    def protocol_sequence(self):
         """Defines the protocol sequence. Should be implemented by child class."""
         pass
 
@@ -81,7 +82,7 @@ class Protocol:
         rate = []
         dm_heralded = []
         for herald_projector, target_state in zip(self.herald_projectors, self.target_states):
-            self.do_lbb(lbb.Herald, herald_projector=herald_projector)
+            self.do_lbb(lbb.herald, herald_projector=herald_projector)
             metrics = self.metrics(target_state)
             fidelity.append(metrics[0])
             rate.append(metrics[1])
@@ -122,7 +123,7 @@ class ProtocolSweep:
 
     def update_parameters_and_run(self, sweep_parameter_names, *args):
         parameters = copy(self.parameters)
-        update_parameters = {name: value for name, value in zip(sweep_parameter_names, args)}
+        update_parameters = dict(zip(sweep_parameter_names, args))
         parameters.update(update_parameters)
         protocol = self.protocol(parameters=parameters)
         return protocol.run()
@@ -135,11 +136,11 @@ class ProtocolSweep:
         data_array_size = [len(parameter_list) for parameter_list in parameter_lists]
         parameter_values_iter = itertools.product(*[list(array) for array in parameter_lists])
 
-        t0 = time.time()
+        time_start = time.time()
         with multi.Pool() as processing_pool:
             results = processing_pool.starmap(wrap, parameter_values_iter)
-        t_sim = time.time() - t0
-        print("Sweep time with multi was {:.3f} s".format(t_sim))
+        time_sim = time.time() - time_start
+        print(f"Sweep time with multi was {time_sim:.3f} s")
 
         fidelity = np.array([x[0] for x in results]).reshape(data_array_size)
         rate = np.array([x[1] for x in results]).reshape(data_array_size)
@@ -182,13 +183,13 @@ class ProtocolSweep:
         for key, values in self.sweep_parameters.items():
             parameters[key] = values[0]
         protocol = self.protocol(parameters=parameters)
-        t0 = time.time()
+        time_start = time.time()
         protocol.run()
-        tf = time.time() - t0
+        time_single = time.time() - time_start
         par_dimensions = [len(sweep) for sweep in self.sweep_parameters.values()]
-        return tf * np.prod(par_dimensions)
+        return time_single * np.prod(par_dimensions)
 
-    def generate_fidelity_rate_curve(self, n=100, type_axis="lin", rate_range=None):
+    def generate_fidelity_rate_curve(self, number_of_rate_points=100, type_axis="lin", rate_range=None):
         if self.dataset == xr.Dataset():
             raise RuntimeError("First run the sweep to create a dataset.")
 
@@ -199,9 +200,9 @@ class ProtocolSweep:
             rmin = float(self.dataset.rate.min())
             rmax = float(self.dataset.rate.max())
         if type_axis == "log":
-            rates = np.logspace(rmin, rmax, n)
+            rates = np.logspace(rmin, rmax, number_of_rate_points)
         elif type_axis == "lin":
-            rates = np.linspace(rmin, rmax, n)
+            rates = np.linspace(rmin, rmax, number_of_rate_points)
         else:
             raise ValueError("type_axis should be lin or log")
 

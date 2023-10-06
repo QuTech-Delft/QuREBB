@@ -9,7 +9,8 @@ import lib.states as st
 
 def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
     """
-    Physical Building Block for conditional amplitude reflection (photon can be reflected, transmitted or lost depending on the spin state).
+    Physical Building Block for conditional amplitude reflection
+    (photon can be reflected, transmitted or lost depending on the spin state).
     Parameters:
         r_u, t_u, l_u: reflection, transmission and loss for Up spin state
         r_d, t_d, l_d: reflection, transmission and loss for Down spin state
@@ -63,7 +64,8 @@ def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
 
 def conditional_phase_reflection(r_u, l_u, r_d, l_d, dim=2):
     """
-    Physical Building Block for conditional phase reflection (photon is either reflected or lost depending on the spin state).
+    Physical Building Block for conditional phase reflection
+    (photon is either reflected or lost depending on the spin state).
     Parameters:
         r_u, l_u: reflection and loss for Up spin state
         r_d,  l_d: reflection and loss for Down spin state

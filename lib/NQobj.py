@@ -3,14 +3,18 @@ from copy import deepcopy
 
 import numpy as np
 import qutip as qt
+from qutip.cy.spconvert import arr_coo2fast, cy_index_permute
+from qutip.permute import _permute  # To support the _permute2 function
 
 
 class NQobj(qt.Qobj):
-    """This Named Qobj (NQobj) class is based on the QuTip Qobj but adds the machinery to use names to index modes in the Qobj instead of numbers.
+    """This Named Qobj (NQobj) class is based on the QuTip Qobj but adds the machinery to use names to index modes
+    in the Qobj instead of numbers.
 
     The NQobj contains only one extra attribute, which is names, this has the same structure and size as dims of Qobj.
-    names tells you which mode is called how. These names can be used to index a mode, but are most usefull to automatticaly match modes
-    for math operations +,-,* between NQobj. Some of the functions of QuTiP have been rewritten in this file to allow them to use names.
+    names tells you which mode is called how. These names can be used to index a mode, but are most usefull to
+    automatticaly match modes for math operations +,-,* between NQobj. Some of the functions of QuTiP have been
+    rewritten in this file to allow them to use names.
     The NQobj takes the same arguments as Qobj and also the kwarg names.
 
     Parameters
@@ -49,25 +53,25 @@ class NQobj(qt.Qobj):
         # Make sure that the format of the names is correct and add it as an attribute to the instance.
         if names is None:
             raise AttributeError("names is a compulsary attribute.")
-        elif type(names) == list:
-            if len(names) == 2 and type(names[0]) == list and type(names[1]) == list:
-                if not all(type(i) == str for i in names[0] + names[1]):
+        if isinstance(names, list):
+            if len(names) == 2 and isinstance(names[0], list) and isinstance(names[1], list):
+                if not all(isinstance(i, str) for i in names[0] + names[1]):
                     raise ValueError("A name must be a string.")
-                elif len(names[0]) != len(set(names[0])) or len(names[1]) != len(set(names[1])):
+                if len(names[0]) != len(set(names[0])) or len(names[1]) != len(set(names[1])):
                     raise ValueError("Do not use duplicate names.")
-                elif not (len(names[0]), len(names[1])) == self.shape_dims:
+                if (len(names[0]), len(names[1])) != self.shape_dims:
                     raise ValueError("The number of names must match the shape_dims.")
                 self.names = names
             else:
-                if not all(type(i) == str for i in names):
+                if not all(isinstance(i, str) for i in names):
                     raise ValueError("A name must be a string.")
-                elif not len(names) == len(set(names)):
+                if len(names) != len(set(names)):
                     raise ValueError("Do not use duplicate names.")
-                elif not (len(names) == self.shape_dims[0] and len(names) == self.shape_dims[1]):
+                if not (len(names) == self.shape_dims[0] and len(names) == self.shape_dims[1]):
                     raise ValueError("The number of names must match the shape_dims.")
                 self.names = [names, names]
-        elif type(names) == str:
-            if not self.shape_dims == (1, 1):
+        elif isinstance(names, str):
+            if self.shape_dims != (1, 1):
                 raise ValueError("Names can only be a string if there shape_dims is (1, 1).")
             self.names = [[names], [names]]
         else:
@@ -87,8 +91,7 @@ class NQobj(qt.Qobj):
                     raise ValueError(
                         'The kind cannot be determined automatically and should be provedid as kw ("oper" or "state")'
                     )
-                else:
-                    self.kind = "oper"
+                self.kind = "oper"
         else:
             raise ValueError('kind can only be "oper", "state", None')
 
@@ -104,24 +107,24 @@ class NQobj(qt.Qobj):
         if isinstance(other, NQobj):
             if not self.type == other.type:
                 raise ValueError("Addition and substraction are only allowed for two NQobj of the same type.")
-            elif not self.kind == other.kind:
+            if not self.kind == other.kind:
                 raise ValueError("Addition and substraction are only allowed for two NQobj of the same kind.")
-            elif self.isket or self.isbra or self.isoper:
+            if self.isket or self.isbra or self.isoper:
                 names = _add_find_required_names(self, other)
                 missing_self = _find_missing_names(self.names, names)
                 missing_other = _find_missing_names(other.names, names)
                 missing_dict_self = _find_missing_dict(missing_self, other, transpose=False)
                 missing_dict_other = _find_missing_dict(missing_other, self, transpose=False)
-                self = _adding_missing_modes(self, missing_dict_self, names, kind=self.kind)
+                self = _adding_missing_modes(self, missing_dict_self, kind=self.kind)
                 self = self.permute(names)
-                other = _adding_missing_modes(other, missing_dict_other, names, kind=other.kind)
+                other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
                 other = other.permute(names)
                 Qobj_result = super(NQobj, self).__add__(other)
                 return NQobj(Qobj_result, names=names, kind=self.kind)
             else:
-                NotImplemented
+                raise NotImplementedError
         else:
-            NotImplemented
+            raise NotImplementedError
 
     def __mul__(self, other):
         """
@@ -133,9 +136,9 @@ class NQobj(qt.Qobj):
             missing_other = _find_missing_names(other.names, names_other)
             missing_dict_self = _find_missing_dict(missing_self, other, transpose=True)
             missing_dict_other = _find_missing_dict(missing_other, self, transpose=True)
-            self = _adding_missing_modes(self, missing_dict_self, names_self, kind=self.kind)
+            self = _adding_missing_modes(self, missing_dict_self, kind=self.kind)
             self = self.permute(names_self)
-            other = _adding_missing_modes(other, missing_dict_other, names_other, kind=other.kind)
+            other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
             other = other.permute(names_other)
             Qobj_result = super(NQobj, self).__mul__(other)
 
@@ -164,7 +167,7 @@ class NQobj(qt.Qobj):
         elif isinstance(other, qt.Qobj):
             return super().__mul__(other)
         else:
-            NotImplemented
+            raise NotImplementedError
 
     def __rmul__(self, other):
         """
@@ -209,10 +212,10 @@ class NQobj(qt.Qobj):
         Generate a LaTeX representation of the Qobj instance. Can be used for
         formatted output in ipython notebook.
         """
-        s = super()._repr_latex_()
-        s += r"names = {}".format(self.names)
-        s += r", kind = {}".format(self.kind)
-        return s
+        string = super()._repr_latex_()
+        string += f"names = {self.names}"
+        string += f", kind = {self.kind}"
+        return string
 
     def dag(self):
         """Adjoint operator of quantum object."""
@@ -235,9 +238,9 @@ class NQobj(qt.Qobj):
             ValueError("Names of both axis are not the same")
 
         if isinstance(sel, list):
-            if all(type(i) == int for i in sel):
+            if all(isinstance(i, int) for i in sel):
                 pass
-            elif all(type(i) == str for i in sel):
+            elif all(isinstance(i, str) for i in sel):
                 sel = [self.names[0].index(name) for name in sel]
             else:
                 raise ValueError("sel must be list of only int or str")
@@ -254,7 +257,7 @@ class NQobj(qt.Qobj):
         return NQobj(super().ptrace(sel), names=[names, names], kind=self.kind)
 
     def permute(self, order):
-        if type(order) == list and all(type(i) == str for i in order):
+        if isinstance(order, list) and all(isinstance(i, str) for i in order):
             order_index = []
             if self.names[0] == self.names[1]:
                 for name in order:
@@ -264,8 +267,8 @@ class NQobj(qt.Qobj):
                 order = [order, order]
         if (
             len(order) == 2
-            and all(type(i) == list for i in order)
-            and all(type(i) == str for i in order[0] + order[1])
+            and all(isinstance(i, list) for i in order)
+            and all(isinstance(i, str) for i in order[0] + order[1])
         ):
             order_index = [[], []]
             for name in order[0]:
@@ -278,7 +281,7 @@ class NQobj(qt.Qobj):
         q = qt.Qobj()
         q.data, q.dims = _permute2(self, order)
         q = q.tidyup() if qt.settings.auto_tidyup else q
-        if type(order) == list and all(type(i) == int for i in order):
+        if isinstance(order, list) and all(isinstance(i, int) for i in order):
             order = [order, order]
 
         # Rearange the names
@@ -390,14 +393,7 @@ def fidelity(A, B):
         raise TypeError("Names of colums and rows need to be the same.")
     if not set(A.names[0]) == set(B.names[0]):
         raise TypeError("fidelity needs both objects to have the same names.")
-    else:
-        return qt.fidelity(A, B.permute(A.names))
-
-
-import qutip.settings as settings
-from qutip.cy.spconvert import arr_coo2fast, cy_index_permute
-# To support the _permute2 function
-from qutip.permute import _permute
+    return qt.fidelity(A, B.permute(A.names))
 
 
 def _permute2(Q, order):
@@ -405,25 +401,25 @@ def _permute2(Q, order):
     Similar function as _permute from qutip but this allows for permutation of non-square matrixes.
     In this case order needs to be a list of two list with the permutation for each axis. e.g. [[1,0], [1,2,0]]"""
     equal_dims = Q.dims[0] == Q.dims[1]
-    if type(order) == list:
+    if isinstance(order, list):
         if Q.isoper:
-            if equal_dims and all(type(i) == int for i in order):
+            if equal_dims and all(isinstance(i, int) for i in order):
                 use_qutip = True
             elif (
                 len(order) == 2
-                and all(type(i) == list for i in order)
-                and all(type(i) == int for i in order[0] + order[1])
+                and all(isinstance(i, list) for i in order)
+                and all(isinstance(i, int) for i in order[0] + order[1])
             ):
                 use_qutip = False
             else:
                 raise TypeError("Order should be a list of int or a list of two list with int.")
         elif Q.isbra or Q.isket:
-            if all(type(i) == int for i in order):
+            if all(isinstance(i, int) for i in order):
                 use_qutip = True
             elif (
                 len(order) == 2
-                and all(type(i) == list for i in order)
-                and all(type(i) == int for i in order[0] + order[1])
+                and all(isinstance(i, list) for i in order)
+                and all(isinstance(i, int) for i in order[0] + order[1])
             ):
                 use_qutip = False
         else:
@@ -431,8 +427,8 @@ def _permute2(Q, order):
             # Make sure that it works if [order, order] is supplied for a different object type then oper.
             if (
                 len(order) == 2
-                and all(type(i) == list for i in order)
-                and all(type(i) == int for i in order[0] + order[1])
+                and all(isinstance(i, list) for i in order)
+                and all(isinstance(i, int) for i in order[0] + order[1])
                 and order[0] == order[1]
             ):
                 order = order[0]
@@ -514,7 +510,7 @@ def _find_missing_dict(missing_names, Q_other, transpose=False):
     return missing_dict
 
 
-def _adding_missing_modes(Q, dict_missing_modes, names, kind="oper"):
+def _adding_missing_modes(Q, dict_missing_modes, kind="oper"):
     modes = []
     for name, dims in dict_missing_modes.items():
         if kind == "oper":

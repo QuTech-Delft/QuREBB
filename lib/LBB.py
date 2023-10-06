@@ -10,11 +10,13 @@ import lib.states as st
 
 
 def trace_out_loss_modes(Q):
+    """Trace out modes that contain 'loss' in their name."""
     loss_modes = [x for x in Q.names[0] if "loss" in x]
     return Q.ptrace(loss_modes, keep=False)
 
 
 def trace_out_everything_but_spins(Q):
+    """Trace out everything but some predetermined spin names."""
     classic_spin_names = ["spin", "Alice", "Bob", "Charlie", "alice", "bob", "charlie"]
     spin_modes = [x for x in Q.names[0] if x in classic_spin_names]
     return Q.ptrace(spin_modes)
@@ -25,7 +27,7 @@ def trace_out_everything_but_spins(Q):
 ###########
 
 
-def SpontaneousEmissionFockSPI(
+def spontaneous_emission_fock_spi(
     dm_in, spin_name, photon_name, dim, kappa_in, kappa_loss, gamma, g, DW, QE, gamma_dephasing=0, ideal=False, **kw
 ):
 
@@ -59,7 +61,7 @@ def SpontaneousEmissionFockSPI(
     return trace_out_loss_modes(dm_out)
 
 
-def ConditionalAmplitudeReflectionTimeBinSPI(
+def conditional_amplitude_reflection_time_bin_spi(
     dm_in,
     spin_name,
     photon_early_name,
@@ -76,7 +78,7 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
     g=None,
     ideal=False,
     gamma_dephasing=0,
-    **kwargs,
+    **kw,
 ):
 
     # cavity params must be [f, kappa_in, kappa_loss, gamma, delta, splitting, g]
@@ -134,7 +136,7 @@ def ConditionalAmplitudeReflectionTimeBinSPI(
 #######################
 
 
-def HOM(dm_in, photon_names, dim=3, **kwargs):
+def HOM(dm_in, photon_names, dim, **kw):
 
     hom_bs = pbb.unitary_beamsplitter(theta=np.pi / 4, dim=dim)
     hom_bs.rename("A", photon_names[0])
@@ -143,7 +145,7 @@ def HOM(dm_in, photon_names, dim=3, **kwargs):
     return hom_bs * dm_in * hom_bs.dag()
 
 
-def BasisRotation(dm_in, photon_names=None, sign=+1, dim=2, **kwargs):
+def basis_rotation(dm_in, photon_names, dim, sign=+1, **kw):
     wp = pbb.unitary_beamsplitter(sign * np.pi / 4, dim=dim)
     wp.rename("A", photon_names[0])
     wp.rename("B", photon_names[1])
@@ -151,7 +153,7 @@ def BasisRotation(dm_in, photon_names=None, sign=+1, dim=2, **kwargs):
     return wp * dm_in * wp.dag()
 
 
-def ModeLoss(dm_in, photon_name, loss, dim, ideal=False, **kwargs):
+def mode_loss(dm_in, photon_name, loss, dim, ideal=False, **kw):
     if ideal:
         loss = 0
     link_loss = pbb.loss(loss, dim=dim)
@@ -167,7 +169,7 @@ def ModeLoss(dm_in, photon_name, loss, dim, ideal=False, **kwargs):
 ###############
 
 
-def PhotonSourceTimeBin(dm_in, photon_early_name, photon_late_name, dim, alpha=None, **kw):
+def photon_source_time_bin(dm_in, photon_early_name, photon_late_name, dim, alpha=None, **kw):
     """alpha is a bool and not none as this cant be saved as the attrs of a xarray dataset."""
     if alpha is None:
         photon_basis = st.photon(dim)
@@ -183,12 +185,12 @@ def PhotonSourceTimeBin(dm_in, photon_early_name, photon_late_name, dim, alpha=N
 #################
 
 
-def SpinPiX(dm_in, spin_name, **kwargs):
+def spin_pi_x(dm_in, spin_name, **kw):
     RX_pi = nq.name(qt.sigmax(), names=spin_name)
     return RX_pi * dm_in * RX_pi.dag()
 
 
-def SpinPiY(dm_in, spin_name, **kwargs):
+def spin_pi_y(dm_in, spin_name, **kw):
     RY_pi = nq.name(qt.sigmay(), names=spin_name)
     return RY_pi * dm_in * RY_pi.dag()
 
@@ -198,7 +200,7 @@ def SpinPiY(dm_in, spin_name, **kwargs):
 ########################
 
 
-def Herald(dm_in, herald_projector, **kw):
+def herald(dm_in, herald_projector, **kw):
     dm_final = herald_projector * dm_in * herald_projector.dag()
     return trace_out_everything_but_spins(dm_final)
 
@@ -208,7 +210,7 @@ def Herald(dm_in, herald_projector, **kw):
 ############################
 
 
-def DarkCounts(dm_in, photon_name, dc_rate, dim, ideal=False, **kwargs):
+def dark_counts(dm_in, photon_name, dc_rate, dim, ideal=False, **kw):
 
     if ideal:
         dc_rate = 0

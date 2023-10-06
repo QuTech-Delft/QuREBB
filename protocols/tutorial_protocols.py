@@ -1,5 +1,3 @@
-import qutip as qt
-
 import lib.LBB as lbb
 import lib.NQobj as nq
 import lib.states as st
@@ -34,14 +32,14 @@ class ProtocolA(Protocol):
         self.target_states = [(state_ud + state_du).unit(), (state_ud - state_du).unit()]
 
     def protocol_sequence(self):
-        self.do_lbb(lbb.SpontaneousEmissionFockSPI, spin_name="Alice", photon_name="Pa")
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["Pa", "Pa_incoh"], loss=self.parameters["insertion_loss"])
+        self.do_lbb(lbb.spontaneous_emission_fock_spi, spin_name="Alice", photon_name="Pa")
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Pa", "Pa_incoh"], loss=self.parameters["insertion_loss"])
 
-        self.do_lbb(lbb.SpontaneousEmissionFockSPI, spin_name="Bob", photon_name="Pb")
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["Pb", "Pb_incoh"], loss=self.parameters["insertion_loss"])
+        self.do_lbb(lbb.spontaneous_emission_fock_spi, spin_name="Bob", photon_name="Pb")
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Pb", "Pb_incoh"], loss=self.parameters["insertion_loss"])
 
         self.do_lbb_on_photons(
-            lbb.ModeLoss, photon_names=["Pa", "Pa_incoh", "Pb", "Pb_incoh"], loss=self.parameters["link_loss"] / 2
+            lbb.mode_loss, photon_names=["Pa", "Pa_incoh", "Pb", "Pb_incoh"], loss=self.parameters["link_loss"] / 2
         )
 
         self.do_lbb(lbb.HOM, photon_names=["Pa", "Pb"])
@@ -71,28 +69,28 @@ class ProtocolB(Protocol):
         self.target_states = [(state_ud + state_du).unit(), (state_ud - state_du).unit()]
 
     def protocol_sequence(self):
-        self.do_lbb(lbb.PhotonSourceTimeBin, photon_early_name="Ea", photon_late_name="La")
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["Ea", "La"], loss=self.parameters["insertion_loss"])
+        self.do_lbb(lbb.photon_source_time_bin, photon_early_name="Ea", photon_late_name="La")
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Ea", "La"], loss=self.parameters["insertion_loss"])
         self.do_lbb(
-            lbb.ConditionalAmplitudeReflectionTimeBinSPI,
+            lbb.conditional_amplitude_reflection_time_bin_spi,
             photon_early_name="Ea",
             photon_late_name="La",
             spin_name="Alice",
         )
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["Ea", "La"], loss=self.parameters["insertion_loss"])
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Ea", "La"], loss=self.parameters["insertion_loss"])
 
-        self.do_lbb(lbb.PhotonSourceTimeBin, photon_early_name="Eb", photon_late_name="Lb")
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["Eb", "Lb"], loss=self.parameters["insertion_loss"])
+        self.do_lbb(lbb.photon_source_time_bin, photon_early_name="Eb", photon_late_name="Lb")
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Eb", "Lb"], loss=self.parameters["insertion_loss"])
         self.do_lbb(
-            lbb.ConditionalAmplitudeReflectionTimeBinSPI,
+            lbb.conditional_amplitude_reflection_time_bin_spi,
             photon_early_name="Eb",
             photon_late_name="Lb",
             spin_name="Bob",
         )
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["Eb", "Lb"], loss=self.parameters["insertion_loss"])
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Eb", "Lb"], loss=self.parameters["insertion_loss"])
 
         self.do_lbb_on_photons(
-            lbb.ModeLoss, photon_names=["Ea", "Eb", "La", "Lb"], loss=self.parameters["link_loss"] / 2
+            lbb.mode_loss, photon_names=["Ea", "Eb", "La", "Lb"], loss=self.parameters["link_loss"] / 2
         )
 
         self.do_lbb(lbb.HOM, photon_names=["Ea", "Eb"])
@@ -115,23 +113,26 @@ class ProtocolC(Protocol):
         self.target_states = [(state_uu + state_dd).unit(), (state_uu - state_dd).unit()]
 
     def protocol_sequence(self):
-        self.do_lbb(lbb.PhotonSourceTimeBin, photon_early_name="E", photon_late_name="L")
+        self.do_lbb(lbb.photon_source_time_bin, photon_early_name="E", photon_late_name="L")
 
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
         self.do_lbb(
-            lbb.ConditionalAmplitudeReflectionTimeBinSPI,
+            lbb.conditional_amplitude_reflection_time_bin_spi,
             photon_early_name="E",
             photon_late_name="L",
             spin_name="Alice",
         )
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
 
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["E", "L"], loss=self.parameters["link_loss"])
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["link_loss"])
 
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
         self.do_lbb(
-            lbb.ConditionalAmplitudeReflectionTimeBinSPI, photon_early_name="E", photon_late_name="L", spin_name="Bob"
+            lbb.conditional_amplitude_reflection_time_bin_spi,
+            photon_early_name="E",
+            photon_late_name="L",
+            spin_name="Bob",
         )
-        self.do_lbb_on_photons(lbb.ModeLoss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
+        self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
 
-        self.do_lbb(lbb.BasisRotation, photon_names=["E", "L"])
+        self.do_lbb(lbb.basis_rotation, photon_names=["E", "L"])
