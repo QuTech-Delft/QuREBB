@@ -38,7 +38,7 @@ def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
     r_prime_u = r_u / np.sqrt(1 - L_u)
     t_prime_u = t_u / np.sqrt(1 - L_u)
     # t_prime_u, r_prime_u = r_prime_u, t_prime_u
-    theta_splitting_u = np.arctan(t_prime_u / r_prime_u)
+    theta_splitting_u = np.arctan( np.abs(t_prime_u) / np.abs(r_prime_u) )
     cav_u = (
         (1j * np.angle(r_u) * r.dag() * r).expm()
         * (1j * np.angle(t_u) * t.dag() * t).expm()
@@ -50,8 +50,9 @@ def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
     theta_loss_d = np.arctan(np.sqrt(L_d / (1 - L_d)))
     r_prime_d = r_d / np.sqrt(1 - L_d)
     t_prime_d = t_d / np.sqrt(1 - L_d)
+
     # t_prime_d, r_prime_d = r_prime_d, t_prime_d
-    theta_splitting_d = np.arctan(t_prime_d / r_prime_d)
+    theta_splitting_d = np.arctan( np.abs(t_prime_d) / np.abs(r_prime_d) )
     cav_d = (
         (1j * (np.angle(r_d) * r.dag() * r)).expm()
         * (1j * (np.angle(t_d) * t.dag() * t)).expm()
