@@ -121,7 +121,7 @@ def conditional_amplitude_reflection_time_bin_spi(
     cav.rename("R", photon_early_name)
     cav.rename("T", "loss_transmission")
     cav.rename("loss", "loss")
-    
+
     dm_E_full = cav * dm_in * cav.dag()
     dm_E = trace_out_loss_modes(dm_E_full)
 

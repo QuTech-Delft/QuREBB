@@ -24,7 +24,7 @@ disable = [
 
 [tool.pylint.basic]
 class-rgx = "_?[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*"
-good-names = ['E','L','t','r','l','LBB','PBB','dm','R','T','L','A','B','u','d','I','L_u','L_d','C','DW','QE','NQobj','i','q','Q','g','a','c']
+good-names = ['QuREBB','E','L','t','r','l','LBB','PBB','dm','R','T','L','A','B','u','d','I','L_u','L_d','C','DW','QE','NQobj','i','q','Q','g','a','c']
 
 [tool.pylint.format]
 max-line-length = 119
