@@ -3,7 +3,7 @@ line-length = 119
 
 [tool.isort]
 profile = "black"
-# src_paths = ["lib", "protocols"]
+src_paths = ["lib"]
 
 [tool.pylint.messages_control]
 disable = [
