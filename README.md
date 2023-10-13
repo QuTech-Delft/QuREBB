@@ -32,7 +32,27 @@ The structure is as follows:
 	- tutorial_protocols.py
 		The three protocols from the paper (A, B, C) are implemented in code in this file.
 
+# Running QuREBB
+
+The virtual enviroment in this QuREBB repository is managed by pipenv (https://pipenv.pypa.io/en/latest/).
+To install pipenv you can use pip:
+
+$ pip install pipenv --user
+
+Using pipenv you then want to install all the dependencies of the repository by syncing with pipenv.
+First navigate in the terminal to the QuREBB folder. Then run:
+
+$ pipenv sync
+
+Once you are synced you can go into a shell of this virtual enviroment (again while being in the QuREBB folder):
+
+$ pipenv shell
+
+The commands you now run are within this virtual enviroment, e.g.:
+
+$ jupyter lab
+
 # Dependencies 
 
 The dependencies are formulated in the pipenv file.
-Also the pipenv tool can be used to load the correct enviroment.
+Also the pipenv tool can be used to load the correct enviroment (see running QuREBB).
