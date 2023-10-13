@@ -8,7 +8,7 @@ from qutip.permute import _permute  # To support the _permute2 function
 
 
 class NQobj(qt.Qobj):
-    """This Named Qobj (NQobj) class is based on the QuTip Qobj but adds the machinery to use names to index modes
+    """This Named Qobj (NQobj) class extends the QuTip Qobj. It introduces the machinery to use names to index modes
     in the Qobj instead of numbers.
 
     The NQobj contains only one extra attribute, which is names, this has the same structure and size as dims of Qobj.
@@ -36,11 +36,17 @@ class NQobj(qt.Qobj):
     def __init__(self, *args, **kwargs):
         """
         NQobj constructor.
+
+        Parameters:
+        - args: Arguments for the parent Qobj class
+        - kwargs: Keyword arguments for the parent Qobj class, and additional `names` and `kind` arguments for NQobj
         """
 
+        # Extract names and kind from kwargs, if present
         names = kwargs.pop("names", None)
         kind = kwargs.pop("kind", None)
-        # If a NQobj is supplied as input and no new names are gives, use the existing ones.
+
+        # If a NQobj is supplied as input and no new names are given, use the existing ones.
         try:
             if isinstance(args[0], NQobj) and names is None:
                 names = (args[0]).names
@@ -50,11 +56,15 @@ class NQobj(qt.Qobj):
         # Initialize the Qobj without the names.
         super().__init__(*args, **kwargs)
 
-        # Make sure that the format of the names is correct and add it as an attribute to the instance.
+        # Check and validate the format of names, then add them as an attribute to the instance.
         if names is None:
             raise AttributeError("names is a compulsary attribute.")
+        
+        # Handle cases where names is a list
         if isinstance(names, list):
+            # Ensure proper structure for the 2D list format
             if len(names) == 2 and isinstance(names[0], list) and isinstance(names[1], list):
+                # Check if all names are strings and unique
                 if not all(isinstance(i, str) for i in names[0] + names[1]):
                     raise ValueError("A name must be a string.")
                 if len(names[0]) != len(set(names[0])) or len(names[1]) != len(set(names[1])):
@@ -63,6 +73,7 @@ class NQobj(qt.Qobj):
                     raise ValueError("The number of names must match the shape_dims.")
                 self.names = names
             else:
+                # Ensure all names are strings and unique for 1D list format
                 if not all(isinstance(i, str) for i in names):
                     raise ValueError("A name must be a string.")
                 if len(names) != len(set(names)):
@@ -70,6 +81,8 @@ class NQobj(qt.Qobj):
                 if not (len(names) == self.shape_dims[0] and len(names) == self.shape_dims[1]):
                     raise ValueError("The number of names must match the shape_dims.")
                 self.names = [names, names]
+
+        # Handle case where names is a string
         elif isinstance(names, str):
             if self.shape_dims != (1, 1):
                 raise ValueError("Names can only be a string if there shape_dims is (1, 1).")
@@ -77,6 +90,7 @@ class NQobj(qt.Qobj):
         else:
             raise TypeError("names should be a string or 1d or 2d list ")
 
+        # Assign the type of NQobj (operator or state)
         if kind in ("oper", "state"):
             self.kind = kind
         elif kind is None:  # If kind is not give, try to extract it from the Qobj form
@@ -96,19 +110,24 @@ class NQobj(qt.Qobj):
             raise ValueError('kind can only be "oper", "state", None')
 
     def copy(self):
-        """Create identical copy"""
+        """Create an identical copy of the NQobj."""
         q = super().copy()
         return NQobj(q, names=deepcopy(self.names), kind=self.kind)
 
     def __add__(self, other):
         """
-        ADDITION with NQobj on LEFT [ ex. Qobj+4 ]
+        Define addition for the NQobj when it's on the left side (e.g., Qobj + 4).
         """
+
+        # Check if the other operand is also an NQobj
         if isinstance(other, NQobj):
+            # Ensure the types and kinds of both NQobj are the same for addition
             if not self.type == other.type:
                 raise ValueError("Addition and substraction are only allowed for two NQobj of the same type.")
             if not self.kind == other.kind:
                 raise ValueError("Addition and substraction are only allowed for two NQobj of the same kind.")
+            
+            # Handle specific cases where the NQobj is a ket, bra, or operator
             if self.isket or self.isbra or self.isoper:
                 names = _add_find_required_names(self, other)
                 missing_self = _find_missing_names(self.names, names)
@@ -128,31 +147,39 @@ class NQobj(qt.Qobj):
 
     def __mul__(self, other):
         """
-        MULTIPLICATION with NQobj on LEFT [ ex. NQobj*4 ]
+        Define multiplication for the NQobj when it's on the left side (e.g., NQobj * 4).
         """
+
+        # Check if the other operand is also an NQobj
         if isinstance(other, NQobj):
+            # Identify the required names for multiplication and find any missing names in both NQobjs
             names_self, names_other = _mul_find_required_names(self, other)
             missing_self = _find_missing_names(self.names, names_self)
             missing_other = _find_missing_names(other.names, names_other)
+
+            # Find missing names and prepare for multiplication
             missing_dict_self = _find_missing_dict(missing_self, other, transpose=True)
             missing_dict_other = _find_missing_dict(missing_other, self, transpose=True)
             self = _adding_missing_modes(self, missing_dict_self, kind=self.kind)
             self = self.permute(names_self)
             other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
             other = other.permute(names_other)
+
+            # Perform the multiplication operation
             Qobj_result = super(NQobj, self).__mul__(other)
 
-            # Return a scalar as Qobj and not as NQobj.
+            # Handle special case where the result is a scalar (Return a scalar as Qobj and not as NQobj).
             if Qobj_result.shape == (1, 1):
                 return qt.Qobj(Qobj_result)
             else:
                 names = [names_self[0], names_other[1]]
-                # Modes that have a size of (1, 1) have been reduced to a scalar and don't need a name anymore.
+                # Modes with size (1, 1) are reduced to scalars and don't need names
                 for name in names[0].copy():
                     if self._dim_of_name(name)[0] == 1 and other._dim_of_name(name)[1] == 1:
                         names[0].remove(name)
                         names[1].remove(name)
 
+                # Determine the kind of the result based on the kinds of the operands
                 if self.kind == "oper" and other.kind == "oper":
                     kind = "oper"
                 elif self.kind == "state" and other.kind == "state":
@@ -162,8 +189,11 @@ class NQobj(qt.Qobj):
 
                 return NQobj(Qobj_result, names=names, kind=kind)
 
+        # Handle multiplication with a number
         elif isinstance(other, numbers.Number):
             return NQobj(super().__mul__(other), names=self.names, kind=self.kind)
+        
+        # Handle multiplication with a plain Qobj
         elif isinstance(other, qt.Qobj):
             return super().__mul__(other)
         else:
