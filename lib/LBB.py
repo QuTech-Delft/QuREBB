@@ -347,27 +347,88 @@ def mode_loss(dm_in, photon_name, loss, dim, ideal=False, **kw):
 
 
 def photon_source_time_bin(dm_in, photon_early_name, photon_late_name, dim, alpha=None, **kw):
-    """alpha is a bool and not none as this cant be saved as the attrs of a xarray dataset."""
+    """
+    Generate a time-bin encoded photonic qubit.
+
+    Parameters:
+    ----------
+    dm_in : NQobj
+        Density matrix that time-bin encoded photon will be added to .
+    photon_early_name, photon_late_name : str
+        Names of the early and late photon modes.
+    dim : int
+        Dimension of the photonic mode (e.g. dim = 2 for |n=0> and |n=1> (vacuum and single photon)).
+    alpha : complex or None, optional
+        If specified, it represents the coherent state amplitude.
+        Otherwise, a single photon state is assumed.
+
+    Returns:
+    --------
+    NQobj
+        Resulting density matrix after generating the time-bin encoded photon.
+    """
+
+    # If alpha is not provided, assume a single photon state
     if alpha is None:
         photon_basis = st.photon(dim)
+
+    # Else, generate a coherent state with the given amplitude        
     else:
         photon_basis = qt.coherent(dim, alpha)
+
+    # Name the early- and late-time bin modes        
     E = nq.name(photon_basis, photon_early_name, "state")
     L = nq.name(photon_basis, photon_late_name, "state")
+
+    # Return the tensor product of the input density matrix with the time-bin encoded state
     return nq.tensor(dm_in, nq.ket2dm((E + L).unit()))
 
 
-#################
-##  Spin gates ##
-#################
+##################
+##  Spin gates  ##
+##################
 
 
 def spin_pi_x(dm_in, spin_name, **kw):
+    """
+    Apply a pi rotation aroud x-axis.
+
+    Parameters:
+    ----------
+    dm_in : NQobj
+        Initial density matrix of the whole quantum system.
+    spin_name : str
+        Name of the spin part to be rotated.
+
+    Returns:
+    --------
+    NQobj
+        Output density matrix after applying the X gate (upto global phase).
+    """
+
+    # Define the pi rotation operator about x-axis
     RX_pi = nq.name(qt.sigmax(), names=spin_name)
     return RX_pi * dm_in * RX_pi.dag()
 
 
 def spin_pi_y(dm_in, spin_name, **kw):
+    """
+    Apply a pi rotation aroud y-axis.
+
+    Parameters:
+    ----------
+    dm_in : NQobj
+        Input density matrix of the whole quantum system.
+    spin_name : str
+        Name of the spin part to be rotated.
+
+    Returns:
+    --------
+    NQobj
+        Output density matrix after applying the Y gate (upto global phase).
+    """
+
+    # Define the pi rotation operator about y-axis
     RY_pi = nq.name(qt.sigmay(), names=spin_name)
     return RY_pi * dm_in * RY_pi.dag()
 
@@ -378,19 +439,59 @@ def spin_pi_y(dm_in, spin_name, **kw):
 
 
 def herald(dm_in, herald_projector, **kw):
+    """
+    Heralding with the given projector operator
+
+    Parameters:
+    ----------
+    dm_in : NQobj
+        Input density matrix of the whole quantum system.
+    herald_projector : NQobj
+        Projector operator representing heralding.
+
+    Returns:
+    --------
+    NQobj
+        Output density matrix after heralding.
+    """
+
+    # Apply the heralding to the density matrix    
     dm_final = herald_projector * dm_in * herald_projector.dag()
     return trace_out_everything_but_spins(dm_final)
 
 
-############################
-##  Noise & Imperfections ##
-############################
+#############################
+##  Noise & Imperfections  ##
+#############################
 
 
 def dark_counts(dm_in, photon_name, dc_rate, dim, ideal=False, **kw):
+    """
+    Dark counts.
 
+    Parameters:
+    ----------
+    dm_in : NQobj
+        Input density matrix of the whole quantum system.
+    photon_name : str
+        Photonic mode that the dark count will be added to.
+    dc_rate : float
+        Rate of dark counts. (Probability)
+    dim : int
+        Dimension of the photonic mode (e.g. dim = 2 for |n=0> and |n=1> (vacuum and single photon)).
+    ideal : bool, optional
+        If True, the dark count rate is set to zero.
+        Default is False.
+
+    Returns:
+    --------
+    NQobj
+        Output density matrix after the dark counts.
+    """
+    
     if ideal:
         dc_rate = 0
     a = nq.name(qt.destroy(dim), photon_name)
 
+    # Photon is added to the designated mode.
     return (dc_rate) * (a.dag() * dm_in * a) + (1 - dc_rate) * dm_in
