@@ -30,12 +30,10 @@ def trace_out_everything_but_spins(Q):
 def spontaneous_emission_fock_spi(
     dm_in, spin_name, photon_name, dim, kappa_in, kappa_loss, gamma, g, DW, QE, gamma_dephasing=0, ideal=False, **kw
 ):
-
-    C = 4 * g**2 / (kappa_in + kappa_loss) / (gamma + gamma_dephasing)
-
     if ideal:
         p_coh, p_incoh, p_2ph, p_loss = 1, 0, 0, 0
     else:
+        C = 4 * g**2 / (kappa_in + kappa_loss) / (gamma + gamma_dephasing)
         p_coh, p_incoh, p_2ph, p_loss = qom.cavity_enhanced_spontaneous_emission(
             kappa_in, kappa_loss, gamma, gamma_dephasing, DW * QE, C
         )
@@ -87,7 +85,9 @@ def conditional_amplitude_reflection_time_bin_spi(
         l_u = l_d = 0
     else:
         if None in (f_operation, kappa_r, kappa_t, gamma, delta, splitting, g):
-            raise ValueError("In not ideal then f_operation, kappa_r, kappa_t, gamma, delta, splitting, g should all be defined.")
+            raise ValueError(
+                "In not ideal then f_operation, kappa_r, kappa_t, gamma, delta, splitting, g should all be defined."
+            )
 
         C = 4 * g**2 / (kappa_t + kappa_r + kappa_loss) / (gamma + gamma_dephasing)
 
@@ -121,7 +121,7 @@ def conditional_amplitude_reflection_time_bin_spi(
     cav.rename("R", photon_early_name)
     cav.rename("T", "loss_transmission")
     cav.rename("loss", "loss")
-    
+
     dm_E_full = cav * dm_in * cav.dag()
     dm_E = trace_out_loss_modes(dm_E_full)
 
