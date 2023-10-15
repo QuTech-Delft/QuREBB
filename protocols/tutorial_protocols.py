@@ -40,7 +40,7 @@ class ProtocolA(Protocol):
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Pb", "Pb_incoh"], loss=self.parameters["insertion_loss"])
 
         self.do_lbb_on_photons(
-            lbb.mode_loss, photon_names=["Pa", "Pa_incoh", "Pb", "Pb_incoh"], loss= np.sqrt(self.parameters["link_loss"])
+            lbb.mode_loss, photon_names=["Pa", "Pa_incoh", "Pb", "Pb_incoh"], loss= 1-np.sqrt(1-self.parameters["link_loss"])
         )
 
         self.do_lbb(lbb.hom, photon_names=["Pa", "Pb"])
@@ -91,7 +91,7 @@ class ProtocolB(Protocol):
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Eb", "Lb"], loss=self.parameters["insertion_loss"])
 
         self.do_lbb_on_photons(
-            lbb.mode_loss, photon_names=["Ea", "Eb", "La", "Lb"], loss= np.sqrt(self.parameters["link_loss"])
+            lbb.mode_loss, photon_names=["Ea", "Eb", "La", "Lb"], loss= 1-np.sqrt(1-self.parameters["link_loss"])
         )
 
         self.do_lbb(lbb.hom, photon_names=["Ea", "Eb"])
@@ -115,31 +115,22 @@ class ProtocolC(Protocol):
 
     def protocol_sequence(self):
         self.do_lbb(lbb.photon_source_time_bin, photon_early_name="E", photon_late_name="L")
-        print(f"step 1: {self.dm.tr()}")
 
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
-        print(f"step 2: {self.dm.tr()}")
         self.do_lbb(
             lbb.conditional_amplitude_reflection_time_bin_spi,
             photon_early_name="E",
             photon_late_name="L",
             spin_name="Alice",
         )
-        print(f"step 3: {self.dm.tr()}")
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
-        print(f"step 4: {self.dm.tr()}")
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["link_loss"])
-        print(f"step 5: {self.dm.tr()}")
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
-        print(f"step 6: {self.dm.tr()}")
         self.do_lbb(
             lbb.conditional_amplitude_reflection_time_bin_spi,
             photon_early_name="E",
             photon_late_name="L",
             spin_name="Bob",
         )
-        print(f"step 7: {self.dm.tr()}")
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["E", "L"], loss=self.parameters["insertion_loss"])
-        print(f"step 9: {self.dm.tr()}")
         self.do_lbb(lbb.basis_rotation, photon_names=["E", "L"])
-        print(f"step 10: {self.dm.tr()}")
