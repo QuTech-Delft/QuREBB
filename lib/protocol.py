@@ -19,75 +19,155 @@ qt.settings.auto_tidyup = False
 
 class Protocol:
     """
-    This class handles a two-qubit entanglement protocol,
-    holds the protocol parameters, photon encoding and density matrix
+    This class handles a two-qubit entanglement protocol.
+    This holds protocol parameters, photon encoding and density matrix.
 
     Attributes:
-            name: (str) the protocol name.
-            parmeters: (dict) dictionary containing the parameters necessary for protocol operation.
-            dim: (int) dimension of the photon space.
-                Default is 3 as this is the minimum for using single photons and HOM interference.
+            name : str 
+                Name of a protocol.
+            parmeters : dict 
+                Dictionary of parameters necessary for the operation of the protocol.
+            dim : int
+                Dimension of photonic modes.
+                Default is 3 (minimum for using single photons and HOM interference).
 
     Additional arguments:
-            photon_names: (list) list of names for the photonic modes. NB: should this be a mandatory attribute?
-            start_state: (NQobj) start state of the protocol
-            target_state: (NQobj) the target final state of the protocol (used to calculate fidelity)
+            photon_names : list
+                List of names for the photonic modes.
+            start_state : NQobj
+                Initial state of the protocol
+            target_state : NQobj
+                Target state of the protocol (for fidelity calculation).
 
     """
 
     def __init__(self, parameters: dict):
+        """
+        Initialize the Protocol class.
+
+        Parameters:
+        ----------
+        parameters : dict
+            Dictionary of parameters of protocol.
+        """
 
         self.parameters: dict = parameters
-
         self.dm: nq.NQobj = None
         self.dm_init: nq.NQobj = None
         self.dm_heralded: List[nq.NQobj] = None
-        if "dim" in parameters:  # photonic size as attribute for convenience
+
+        # Check for dimension of photonic mode in the parameters, else raise an error
+        if "dim" in parameters:  
             self.dim = parameters["dim"]
         else:
             raise ValueError("The entry 'dim' needs to be present in parameters")
 
-        self.target_states: List[nq.NQobj] = []  # target state of spins
-        self.herald_projectors: List[nq.NQobj] = []  # herald state of photon
+        self.target_states: List[nq.NQobj] = []  # target spin state
+        self.herald_projectors: List[nq.NQobj] = []  # heralding operator
 
+        # Fidelity to be calculated
         self.fidelity: Optional[list] = None
         self.fidelity_total: Optional[float] = None
+
+        # Entanglement generation rate to be calculated
         self.rate: Optional[list] = None
         self.rate_total: Optional[float] = None
 
+
     def run(self):
-        """Runs the protocol sequence and return the metrics"""
+        """
+        Execute the protocol sequence.
+
+        Returns:
+        -------
+        tuple
+            Tuple containing fidelity and rate of the protocol.
+        """
         self.dm = self.dm_init
         self.protocol_sequence()
         fidelity, rate = self.herald()
         return fidelity, rate
 
+
     def protocol_sequence(self):
-        """Defines the protocol sequence. Should be implemented by child class."""
+        """
+        Defines the protocol sequence. To be implemented in subclasses.
+        """
         pass
 
+
     def do_lbb(self, LBB, **kwargs):
-        """Makes a logical building block act on the density matrix."""
+        """
+        Apply a logical building block to the density matrix.
+
+        Parameters:
+        ----------
+        LBB : function of LBB.py
+            Logical building block.
+        **kwargs : dict
+            Additional keyword arguments.
+        """
         kwargs.update(self.parameters)
 
         self.dm = LBB(dm_in=self.dm, **kwargs)
 
+
     def do_lbb_on_photons(self, LBB, photon_names, **kwargs):
+        """
+        Apply a logical building block acting on photonic modes.
+
+        Parameters:
+        ----------
+        LBB : function (of LBB.py)
+            Logical building block.
+        photon_names : list of str
+            Name of photonic modes which LBB is applied to.
+        **kwargs : dict
+            Additional keyword arguments.
+        """
+
         for photon_name in photon_names:
             self.do_lbb(LBB, photon_name=photon_name, **kwargs)
 
+
     def herald(self):
+        """
+        Perform a heralding operation --- projection --- to the density matrix. 
+        This method also calculates metrics for each processed matrix, and updates the
+        instance's fidelity and rate attributes.
+
+        Returns:
+        -------
+        tuple
+            A tuple containing the fidelity and rate after heralding.
+        """
+
+        # Create a copy of the current density matrix
         dm = copy(self.dm)
+
+        # Initialize lists to store fidelity, rate, and heralded density matrices
         fidelity = []
         rate = []
         dm_heralded = []
+
+        # Iterate over herald projectors and target states
         for herald_projector, target_state in zip(self.herald_projectors, self.target_states):
+
+            # Apply the herald operation to the density matrix using the given projector
             self.do_lbb(lbb.herald, herald_projector=herald_projector)
+
+            # Calculate the fidelity and rate metrics for the current state
             metrics = self.metrics(target_state)
             fidelity.append(metrics[0])
             rate.append(metrics[1])
+
+            # Store the heralded density matrix
             dm_heralded.append(self.dm)
+
+            # Reset the density matrix to its original state before the next iteration
             self.dm = copy(dm)
+
+        # Update class attributes with calculated values
         self.fidelity = fidelity
         self.fidelity_total = np.average(np.array(fidelity), weights=np.array(rate))
         self.rate = rate
@@ -97,10 +177,26 @@ class Protocol:
 
     def metrics(self, target_state):
         """
-        Calculates fidelity and success probability versus target spin state
+        Calculate the fidelity and success probability of the current density matrix for a given target spin state.
+
+        Parameters:
+        ----------
+        target_state : NQobj
+            The target quantum state to which the fidelity of the current state is compared.
+
+        Returns:
+        -------
+        tuple
+            A tuple containing the fidelity and success rate of the current density matrix 
+            with respect to the target state.
         """
+
+        # Calculate the fidelity between the current state and the target state
         fidelity = nq.fidelity(self.dm.unit(), nq.ket2dm(target_state)) ** 2
+
+        # Calculate the trace (success probability) of the current density matrix
         rate = self.dm.tr()
+        
         return fidelity, rate
 
 
