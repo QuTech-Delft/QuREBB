@@ -168,7 +168,7 @@ class ProtocolSweep:
         date_time = self._generate_date_time()
         file_path = join(self.save_folder, f"{date_time}{self.save_name}_fidelity_rate.hdf5")
         # Invalid_netcdf is used to be able to save None and bools as attrs
-        self.dataset.to_netcdf(file_path, engine="h5netcdf", invalid_netcdf=True)
+        self.dataset_fidelity_rate.to_netcdf(file_path, engine="h5netcdf", invalid_netcdf=True)
 
     def _generate_date_time(self):
         time_stamp = datetime.datetime.now()
@@ -200,7 +200,7 @@ class ProtocolSweep:
             rmin = float(self.dataset.rate.min())
             rmax = float(self.dataset.rate.max())
         if type_axis == "log":
-            rates = np.logspace(rmin, rmax, number_of_rate_points)
+            rates = np.geomspace(rmin, rmax, number_of_rate_points)
         elif type_axis == "lin":
             rates = np.linspace(rmin, rmax, number_of_rate_points)
         else:
