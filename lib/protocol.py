@@ -23,9 +23,9 @@ class Protocol:
     This holds protocol parameters, photon encoding and density matrix.
 
     Attributes:
-            name : str 
+            name : str
                 Name of a protocol.
-            parmeters : dict 
+            parmeters : dict
                 Dictionary of parameters necessary for the operation of the protocol.
             dim : int
                 Dimension of photonic modes.
@@ -57,7 +57,7 @@ class Protocol:
         self.dm_heralded: List[nq.NQobj] = None
 
         # Check for dimension of photonic mode in the parameters, else raise an error
-        if "dim" in parameters:  
+        if "dim" in parameters:
             self.dim = parameters["dim"]
         else:
             raise ValueError("The entry 'dim' needs to be present in parameters")
@@ -73,7 +73,6 @@ class Protocol:
         self.rate: Optional[list] = None
         self.rate_total: Optional[float] = None
 
-
     def run(self):
         """
         Execute the protocol sequence.
@@ -88,13 +87,11 @@ class Protocol:
         fidelity, rate = self.herald()
         return fidelity, rate
 
-
     def protocol_sequence(self):
         """
         Defines the protocol sequence. To be implemented in subclasses.
         """
         pass
-
 
     def do_lbb(self, LBB, **kwargs):
         """
@@ -110,7 +107,6 @@ class Protocol:
         kwargs.update(self.parameters)
 
         self.dm = LBB(dm_in=self.dm, **kwargs)
-
 
     def do_lbb_on_photons(self, LBB, photon_names, **kwargs):
         """
@@ -129,10 +125,9 @@ class Protocol:
         for photon_name in photon_names:
             self.do_lbb(LBB, photon_name=photon_name, **kwargs)
 
-
     def herald(self):
         """
-        Perform a heralding operation --- projection --- to the density matrix. 
+        Perform a heralding operation --- projection --- to the density matrix.
         This method also calculates metrics for each processed matrix, and updates the
         instance's fidelity and rate attributes.
 
@@ -187,7 +182,7 @@ class Protocol:
         Returns:
         -------
         tuple
-            A tuple containing the fidelity and success rate of the current density matrix 
+            A tuple containing the fidelity and success rate of the current density matrix
             with respect to the target state.
         """
 
@@ -196,7 +191,7 @@ class Protocol:
 
         # Calculate the trace (success probability) of the current density matrix
         rate = self.dm.tr()
-        
+
         return fidelity, rate
 
 

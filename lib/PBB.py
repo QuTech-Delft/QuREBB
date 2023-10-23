@@ -22,7 +22,7 @@ def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
 
     Returns:
         cav_tot : NQobj
-            A cavity operator combining the effect of reflection, 
+            A cavity operator combining the effect of reflection,
             transmission, and loss conditioned on the spin state.
     """
 
@@ -34,7 +34,7 @@ def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
     if not math.isclose(tot_u, 1, abs_tol=1e-6):
         raise ValueError("The squares of r_u, t_u and l_u should add up to 1.")
 
-   # Definitions of operators and states.
+    # Definitions of operators and states.
     r = nq.name(qt.destroy(dim), "R")
     t = nq.name(qt.destroy(dim), "T")
     l = nq.name(qt.destroy(dim), "loss")
@@ -101,7 +101,7 @@ def conditional_phase_reflection(r_u, l_u, r_d, l_d, dim=2):
     if not math.isclose(tot_u, 1, abs_tol=1e-6):
         raise ValueError("The squares of r_u and l_u should add up to 1.")
 
-   # Definitions of operators and states.
+    # Definitions of operators and states.
     R = nq.name(qt.destroy(dim), "R")
     L = nq.name(qt.destroy(dim), "loss")
     u = nq.name(st.up, "spin")
@@ -187,11 +187,11 @@ def waveplate(theta=0, dim=2):
     """
     Physical Building Block of a waveplate.
     Change the polarization-encoded photon statea.
-    Uses H and V as default names.    
+    Uses H and V as default names.
 
     Parameters:
         theta : float
-            Waveplate angle. 
+            Waveplate angle.
             0       -> no change in polarization
             pi/4    -> rotates the polarization by 45 degrees
         dim : int
@@ -299,7 +299,7 @@ def phase(theta=0, dim=2):
     a = nq.name(qt.destroy(dim), "photon")
 
     phase_operator = (1j * theta * a.dag() * a).expm()
-    
+
     return phase_operator
 
 

@@ -77,7 +77,7 @@ def spontaneous_emission_fock_spi(
     gamma_dephasing : float, optional
         Rate of dephasing. Default is 0.
     ideal : bool, optional
-        If True, simulates the ideal spontaneous emission. 
+        If True, simulates the ideal spontaneous emission.
         Default is False.
 
     Returns:
@@ -86,7 +86,7 @@ def spontaneous_emission_fock_spi(
         Output density matrix after the spontaneous emission.
     """
 
-   # If the process is ideal, set the probabilities accordingly
+    # If the process is ideal, set the probabilities accordingly
     if ideal:
         p_coh, p_incoh, p_2ph, p_loss = 1, 0, 0, 0
     else:
@@ -115,7 +115,7 @@ def spontaneous_emission_fock_spi(
     c_2ph.rename("spin", spin_name)
     c_2ph.rename("photon", photon_name)
 
-    # Compute the output density matrix using the defined channels    
+    # Compute the output density matrix using the defined channels
     c = np.sqrt(p_coh) * c_coh + np.sqrt(p_loss) * c_loss
     dm_out = c * dm_in * c.dag() + p_incoh * c_incoh * dm_in * c_incoh.dag() + p_2ph * c_2ph * dm_in * c_2ph.dag()
 
@@ -156,12 +156,12 @@ def conditional_amplitude_reflection_time_bin_spi(
     atom_centered : bool, optional
         Whether the frequency of photonic mode are centered around the atom or the cavity.
         Default is True.
-    f_operation : 
+    f_operation :
         frequency of photonic mode
     kappa_r, kappa_t, kappa_loss, gamma, delta, splitting, g, gamma_dephasing : float
-        Parameters characterizing a cQED system.    
+        Parameters characterizing a cQED system.
     ideal : bool, optional
-        If True, simulates the ideal reflection. 
+        If True, simulates the ideal reflection.
         Default is False.
 
     Returns:
@@ -171,17 +171,17 @@ def conditional_amplitude_reflection_time_bin_spi(
 
     Description:
     ------------
-    - Ideal case: 
+    - Ideal case:
       perfect reflection without any transmission or losses.
       (the reflection coefficient is one and the others are zero)
 
-    - Realistic case: 
-      Based on the provided cQED parameters and the choice of centeredness (atom or cavity), 
-      the function calculates the reflection, transmission, and loss coefficients. 
-      
-    It then performs the conditional amplitude reflection operation on the input density matrix and 
+    - Realistic case:
+      Based on the provided cQED parameters and the choice of centeredness (atom or cavity),
+      the function calculates the reflection, transmission, and loss coefficients.
+
+    It then performs the conditional amplitude reflection operation on the input density matrix and
     returns the processed output density matrix.
-    """        
+    """
 
     # If ideal, directly set reflection and transmission probabilities
     if ideal:
@@ -189,7 +189,7 @@ def conditional_amplitude_reflection_time_bin_spi(
         t_d = r_u = 0
         l_u = l_d = 0
 
-    # If not ideal, check if all required parameters are provided        
+    # If not ideal, check if all required parameters are provided
     else:
         if None in (f_operation, kappa_r, kappa_t, gamma, delta, splitting, g):
             raise ValueError(
@@ -247,10 +247,11 @@ def conditional_amplitude_reflection_time_bin_spi(
 ##  Photonic operations  ##
 ###########################
 
+
 def hom(dm_in, photon_names, dim, **kw):
     """
     Simulate the Hong-Ou-Mandel (HOM) interference with a 50:50 beamsplitter.
-    
+
     Parameters:
     -----------
     dm_in : NQobj
@@ -259,7 +260,7 @@ def hom(dm_in, photon_names, dim, **kw):
         Names assigned to the two photonic modes to be interfered.
     dim : int
         Dimension of the photonic mode (e.g. dim = 3 for vacuum, single-photon, and two-photon states).
-    
+
     Returns:
     --------
     NQobj
@@ -267,7 +268,7 @@ def hom(dm_in, photon_names, dim, **kw):
     """
 
     # Create a unitary beamsplitter operation with the beamsplitter physical building block (PBB)
-    hom_bs = pbb.unitary_beamsplitter(theta = np.pi/4, dim=dim)
+    hom_bs = pbb.unitary_beamsplitter(theta=np.pi / 4, dim=dim)
     # Rename the first output mode of the beamsplitter with the first photon name provided
     hom_bs.rename("A", photon_names[0])
     # Rename the second output mode of the beamsplitter with the second photon name provided
@@ -280,7 +281,7 @@ def basis_rotation(dm_in, photon_names, dim, sign=+1, **kw):
 
     """
     Perform a basis rotation on the photonic system using a beamsplitter.
-    
+
     Parameters:
     -----------
     dm_in : NQobj
@@ -291,12 +292,12 @@ def basis_rotation(dm_in, photon_names, dim, sign=+1, **kw):
         Dimension of the photonic mode (e.g. dim = 2 for |n=0> and |n=1> (vacuum and single photon)).
     sign : int, optional
         Sign for the rotation (either +1 or -1). Default is +1.
-    
+
     Returns:
     --------
     NQobj
         Output density matrix of the whole quantum system after the basis rotation.
-    """    
+    """
 
     wp = pbb.unitary_beamsplitter(sign * np.pi / 4, dim=dim)
     wp.rename("A", photon_names[0])
@@ -308,7 +309,7 @@ def basis_rotation(dm_in, photon_names, dim, sign=+1, **kw):
 def mode_loss(dm_in, photon_name, loss, dim, ideal=False, **kw):
     """
     Simulate loss of a photonic mode.
-    
+
     Parameters:
     -----------
     dm_in : NQobj
@@ -320,9 +321,9 @@ def mode_loss(dm_in, photon_name, loss, dim, ideal=False, **kw):
     dim : int
         Dimension of the photonic mode (e.g. dim = 2 for |n=0> and |n=1> (vacuum and single photon)).
     ideal : bool, optional
-        If True, loss = 0. 
+        If True, loss = 0.
         Default is False.
-    
+
     Returns:
     --------
     NQobj
@@ -337,7 +338,7 @@ def mode_loss(dm_in, photon_name, loss, dim, ideal=False, **kw):
 
     dm_loss = link_loss * dm_in * link_loss.dag()
     dm_out = dm_loss.ptrace(["loss"], keep=False)
-    
+
     return dm_out
 
 
@@ -372,11 +373,11 @@ def photon_source_time_bin(dm_in, photon_early_name, photon_late_name, dim, alph
     if alpha is None:
         photon_basis = st.photon(dim)
 
-    # Else, generate a coherent state with the given amplitude        
+    # Else, generate a coherent state with the given amplitude
     else:
         photon_basis = qt.coherent(dim, alpha)
 
-    # Name the early- and late-time bin modes        
+    # Name the early- and late-time bin modes
     E = nq.name(photon_basis, photon_early_name, "state")
     L = nq.name(photon_basis, photon_late_name, "state")
 
@@ -455,7 +456,7 @@ def herald(dm_in, herald_projector, **kw):
         Output density matrix after heralding.
     """
 
-    # Apply the heralding to the density matrix    
+    # Apply the heralding to the density matrix
     dm_final = herald_projector * dm_in * herald_projector.dag()
     return trace_out_everything_but_spins(dm_final)
 
@@ -488,7 +489,7 @@ def dark_counts(dm_in, photon_name, dc_rate, dim, ideal=False, **kw):
     NQobj
         Output density matrix after the dark counts.
     """
-    
+
     if ideal:
         dc_rate = 0
     a = nq.name(qt.destroy(dim), photon_name)

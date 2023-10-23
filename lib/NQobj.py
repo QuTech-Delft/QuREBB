@@ -9,19 +9,19 @@ from qutip.permute import _permute  # To support the _permute2 function
 
 class NQobj(qt.Qobj):
     """
-    The NQobj (Named Qobj) class is an extension of the QuTip's Qobj class. It is designed to enable 
-    the use of symbolic names to represent and index modes in a quantum object, as opposed to using 
+    The NQobj (Named Qobj) class is an extension of the QuTip's Qobj class. It is designed to enable
+    the use of symbolic names to represent and index modes in a quantum object, as opposed to using
     numerical indices.
 
-    One of the primary motivations behind the NQobj is to facilitate mathematical operations (+, -, *) 
-    between different NQobj instances by automatically matching modes based on their symbolic names. 
+    One of the primary motivations behind the NQobj is to facilitate mathematical operations (+, -, *)
+    between different NQobj instances by automatically matching modes based on their symbolic names.
     This is particularly useful when working with multi-partite quantum systems where the tensor structure
     can be complex.
 
-    In addition to the standard attributes and methods inherited from the Qobj class, NQobj introduces 
-    an additional attribute, `names`, which is structured similarly to the `dims` attribute of Qobj. 
-    The `names` attribute is a list that provides symbolic names to each mode, making it easier to 
-    identify and operate on specific modes.    
+    In addition to the standard attributes and methods inherited from the Qobj class, NQobj introduces
+    an additional attribute, `names`, which is structured similarly to the `dims` attribute of Qobj.
+    The `names` attribute is a list that provides symbolic names to each mode, making it easier to
+    identify and operate on specific modes.
 
     Parameters
     ----------
@@ -31,7 +31,7 @@ class NQobj(qt.Qobj):
         if names is str                     :    names = "A"          ->   names = [["A"], ["A"]]
         if names is list of str             :    names = ["A", "B"]   ->   names = [["A", "B"], ["A", "B"]]
         if names is list of two list of str :    names = names
-        
+
         names for the modes: the shape has to match dims after the above correction.
 
 
@@ -68,7 +68,7 @@ class NQobj(qt.Qobj):
         # Check and validate the format of names, then add them as an attribute to the instance.
         if names is None:
             raise AttributeError("names is a compulsary attribute.")
-        
+
         # Handle cases where names is a list
         if isinstance(names, list):
             # Ensure proper structure for the 2D list format
@@ -135,7 +135,7 @@ class NQobj(qt.Qobj):
                 raise ValueError("Addition and substraction are only allowed for two NQobj of the same type.")
             if not self.kind == other.kind:
                 raise ValueError("Addition and substraction are only allowed for two NQobj of the same kind.")
-            
+
             # Handle specific cases where the NQobj is a ket, bra, or operator
             if self.isket or self.isbra or self.isoper:
                 names = _add_find_required_names(self, other)
@@ -175,7 +175,7 @@ class NQobj(qt.Qobj):
                 other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
                 other = other.permute(names_other)
 
-            # Perform the multiplication operation           
+            # Perform the multiplication operation
             Qobj_result = super(NQobj, self).__mul__(other)
 
             # Handle special case where the result is a scalar (Return a scalar as Qobj and not as NQobj).
@@ -202,7 +202,7 @@ class NQobj(qt.Qobj):
         # Handle multiplication with a number
         elif isinstance(other, numbers.Number):
             return NQobj(super().__mul__(other), names=self.names, kind=self.kind)
-        
+
         # Handle multiplication with a plain Qobj
         elif isinstance(other, qt.Qobj):
             return super().__mul__(other)
@@ -215,7 +215,7 @@ class NQobj(qt.Qobj):
         """
         # Handle multiplication with a number
         if isinstance(other, numbers.Number):
-            # Use the multiplication method defined for NQobj            
+            # Use the multiplication method defined for NQobj
             return self.__mul__(other)
 
         # Handle multiplication with a plain Qobj
@@ -257,7 +257,7 @@ class NQobj(qt.Qobj):
         """
         String representation of the NQobj.
         Appends the names and kind attributes to the Qobj's string representation.
-        """        
+        """
         return super().__str__() + "\nnames: " + self.names.__str__() + "\nkind: " + self.kind.__str__()
 
     def _repr_latex_(self):
@@ -266,7 +266,7 @@ class NQobj(qt.Qobj):
         Useful for formatted output in IPython notebooks.
         """
         string = super()._repr_latex_()
-        string += r' $\\$ '
+        string += r" $\\$ "
         string += f"names = {self.names}"
         string += f", kind = {self.kind}"
         return string
@@ -429,24 +429,24 @@ class NQobj(qt.Qobj):
         # If the names in rows and columns are the same, no expansion needed
         if self.names[0] == self.names[1]:
             return self
-        
-        # Copy the kind of the current NQobj        
+
+        # Copy the kind of the current NQobj
         kind = self.kind
 
-        # Determine the set of all names required for expansion        
+        # Determine the set of all names required for expansion
         required_names = self.names[0] + self.names[1]
         required_names = list(dict.fromkeys(required_names))  # Remove duplicates while keeping order (Python 3.7+)
 
-        # Identify which names are missing from the current NQobj        
+        # Identify which names are missing from the current NQobj
         missing = _find_missing_names(self.names, [required_names, required_names])
 
         # Construct a dictionary of the missing names and their corresponding dimensions
         missing_dict = {name: self._dim_of_name(name) for name in missing[0] + missing[1]}
 
-        # Deep copy the current names to avoid modifying the original        
+        # Deep copy the current names to avoid modifying the original
         names = deepcopy(self.names)
 
-        # Iterate over the missing names and their dimensions        
+        # Iterate over the missing names and their dimensions
         for name, dims in missing_dict.items():
             if dims[0] is None:
                 names[0].append(name)
@@ -566,7 +566,6 @@ def _mul_find_required_names(Q_left, Q_right):
     names_Q_right_for_overlap = [name for name in Q_right.names[0] if not Q_right._dim_of_name(name)[0] == 1]
     names_Q_left_for_overlap = [name for name in Q_left.names[1] if not Q_left._dim_of_name(name)[1] == 1]
 
-    
     # Goal: to get a list with modes that need to appear in both objects to perform the multiplication, the overlap.
     # Determine the overlapping mode names between the two NQobjs based on their kinds
     if Q_right.kind == "state" and Q_left.kind == "oper":
@@ -609,7 +608,7 @@ def _find_missing_names(names, required_names):
 def _find_missing_dict(missing_names, Q_other, transpose=False):
     """
     Map the missing mode names to their corresponding dimensions in another NQobj.
-    """    
+    """
     missing_dict = {}
     for name in set(missing_names[0] + missing_names[1]):
         dims = list(Q_other._dim_of_name(name))
@@ -635,18 +634,18 @@ def _adding_missing_modes(Q, dict_missing_modes, kind="oper"):
     Returns:
     - The NQobj with missing modes added.
     """
-    
+
     modes = []  # List to collect modes that need to be added to the NQobj
 
     # Iterate through each missing mode and its dimensions
     for name, dims in dict_missing_modes.items():
 
-        # If the NQobj kind is an operator        
+        # If the NQobj kind is an operator
         if kind == "oper":
             assert dims[0] == dims[1], "For adding eye matrixes they need to be square"
             modes.append(NQobj(qt.qeye(dims[0]), names=name, kind="oper"))
 
-        # If the NQobj kind is a quantum state            
+        # If the NQobj kind is a quantum state
         if kind == "state":
             if not None in dims:
                 modes.append(

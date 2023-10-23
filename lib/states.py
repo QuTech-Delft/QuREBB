@@ -2,14 +2,14 @@ import numpy as np
 import qutip as qt
 
 # Define standard basis states for a two-level system
-up = qt.basis(2, 0)   # dark state
-down = qt.basis(2, 1)   # bright state
+up = qt.basis(2, 0)  # dark state
+down = qt.basis(2, 1)  # bright state
 
 # Define superposition states in the X and Y basis
-x = (up + down).unit()   # X basis state
-x_min = (up - down).unit()   # -X basis state
-y = (up + 1j * down).unit()   # Y basis state
-y_min = (up - 1j * down).unit()   # -Y basis state
+x = (up + down).unit()  # X basis state
+x_min = (up - down).unit()  # -X basis state
+y = (up + 1j * down).unit()  # Y basis state
+y_min = (up - 1j * down).unit()  # -Y basis state
 
 # Convert the defined kets to density matrices
 up_dm = qt.ket2dm(up)
@@ -39,7 +39,7 @@ def alpha_ket(alpha):
     --------
     Qobj
         Resulting superposition state.
-    """    
+    """
     return np.sqrt(alpha) * down + np.sqrt(1 - alpha) * up
 
 
@@ -56,7 +56,7 @@ def alpha_dm(alpha):
     --------
     Qobj
         Density matrix of superposition state.
-    """    
+    """
     return qt.ket2dm(alpha_ket(alpha))
 
 
@@ -67,7 +67,7 @@ def vacuum(dim=2):
     Parameters:
     ----------
     dim : int, optional
-        Dimension of the Hilbert space. Default is 2.    
+        Dimension of the Hilbert space. Default is 2.
     """
     return qt.basis(dim, 0)
 
@@ -79,9 +79,10 @@ def vacuum_dm(dim=2):
     Parameters:
     ----------
     dim : int, optional
-        Dimension of the Hilbert space. Default is 2.    
+        Dimension of the Hilbert space. Default is 2.
     """
     return qt.ket2dm(vacuum(dim=dim))
+
 
 def photon(dim=2):
     """

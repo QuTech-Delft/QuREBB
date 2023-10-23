@@ -41,7 +41,9 @@ class ProtocolA(Protocol):
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Pb", "Pb_incoh"], loss=self.parameters["insertion_loss"])
 
         self.do_lbb_on_photons(
-            lbb.mode_loss, photon_names=["Pa", "Pa_incoh", "Pb", "Pb_incoh"], loss= 1-np.sqrt(1-self.parameters["link_loss"])
+            lbb.mode_loss,
+            photon_names=["Pa", "Pa_incoh", "Pb", "Pb_incoh"],
+            loss=1 - np.sqrt(1 - self.parameters["link_loss"]),
         )
 
         self.do_lbb(lbb.hom, photon_names=["Pa", "Pb"])
@@ -92,7 +94,7 @@ class ProtocolB(Protocol):
         self.do_lbb_on_photons(lbb.mode_loss, photon_names=["Eb", "Lb"], loss=self.parameters["insertion_loss"])
 
         self.do_lbb_on_photons(
-            lbb.mode_loss, photon_names=["Ea", "Eb", "La", "Lb"], loss= 1-np.sqrt(1-self.parameters["link_loss"])
+            lbb.mode_loss, photon_names=["Ea", "Eb", "La", "Lb"], loss=1 - np.sqrt(1 - self.parameters["link_loss"])
         )
 
         self.do_lbb(lbb.hom, photon_names=["Ea", "Eb"])
