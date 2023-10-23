@@ -111,14 +111,15 @@ class NQobj(qt.Qobj):
                 raise ValueError("Addition and substraction are only allowed for two NQobj of the same kind.")
             if self.isket or self.isbra or self.isoper:
                 names = _add_find_required_names(self, other)
-                missing_self = _find_missing_names(self.names, names)
-                missing_other = _find_missing_names(other.names, names)
-                missing_dict_self = _find_missing_dict(missing_self, other, transpose=False)
-                missing_dict_other = _find_missing_dict(missing_other, self, transpose=False)
-                self = _adding_missing_modes(self, missing_dict_self, kind=self.kind)
-                self = self.permute(names)
-                other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
-                other = other.permute(names)
+                if not names == self.names or not names == other.names:
+                    missing_self = _find_missing_names(self.names, names)
+                    missing_other = _find_missing_names(other.names, names)
+                    missing_dict_self = _find_missing_dict(missing_self, other, transpose=False)
+                    missing_dict_other = _find_missing_dict(missing_other, self, transpose=False)
+                    self = _adding_missing_modes(self, missing_dict_self, kind=self.kind)
+                    self = self.permute(names)
+                    other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
+                    other = other.permute(names)
                 Qobj_result = super(NQobj, self).__add__(other)
                 return NQobj(Qobj_result, names=names, kind=self.kind)
             else:
@@ -132,14 +133,15 @@ class NQobj(qt.Qobj):
         """
         if isinstance(other, NQobj):
             names_self, names_other = _mul_find_required_names(self, other)
-            missing_self = _find_missing_names(self.names, names_self)
-            missing_other = _find_missing_names(other.names, names_other)
-            missing_dict_self = _find_missing_dict(missing_self, other, transpose=True)
-            missing_dict_other = _find_missing_dict(missing_other, self, transpose=True)
-            self = _adding_missing_modes(self, missing_dict_self, kind=self.kind)
-            self = self.permute(names_self)
-            other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
-            other = other.permute(names_other)
+            if not names_self == self.names or not names_other == other.names:
+                missing_self = _find_missing_names(self.names, names_self)
+                missing_other = _find_missing_names(other.names, names_other)
+                missing_dict_self = _find_missing_dict(missing_self, other, transpose=True)
+                missing_dict_other = _find_missing_dict(missing_other, self, transpose=True)
+                self = _adding_missing_modes(self, missing_dict_self, kind=self.kind)
+                self = self.permute(names_self)
+                other = _adding_missing_modes(other, missing_dict_other, kind=other.kind)
+                other = other.permute(names_other)
             Qobj_result = super(NQobj, self).__mul__(other)
 
             # Return a scalar as Qobj and not as NQobj.
@@ -213,6 +215,7 @@ class NQobj(qt.Qobj):
         formatted output in ipython notebook.
         """
         string = super()._repr_latex_()
+        string += r' $\\$ '
         string += f"names = {self.names}"
         string += f", kind = {self.kind}"
         return string
