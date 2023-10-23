@@ -1,50 +1,108 @@
 import numpy as np
 import qutip as qt
 
-up          = qt.basis(2,0) # dark state
-down        = qt.basis(2,1) # bright state
-x           = (up + down).unit()
-x_min       = (up - down).unit()
-y           = (up + 1j*down).unit()
-y_min       = (up - 1j*down).unit()
+# Define standard basis states for a two-level system
+up = qt.basis(2, 0)  # dark state
+down = qt.basis(2, 1)  # bright state
 
-up_dm       = qt.ket2dm(up)
-down_dm     = qt.ket2dm(down)
-x_dm        = qt.ket2dm(x)
-x_min_dm    = qt.ket2dm(x_min)
-y_dm        = qt.ket2dm(y)
-y_min_dm    = qt.ket2dm(y_min)
+# Define superposition states in the X and Y basis
+x = (up + down).unit()  # X basis state
+x_min = (up - down).unit()  # -X basis state
+y = (up + 1j * down).unit()  # Y basis state
+y_min = (up - 1j * down).unit()  # -Y basis state
 
-vacuum      = qt.basis(2,0)
-photon      = qt.basis(2,1)
-vacuum_2    = qt.basis(3,0)
-photon_2    = qt.basis(3,1)
-photon2_2   = qt.basis(3,2)
-vacuum_dm   = qt.ket2dm(vacuum)
-photon_dm   = qt.ket2dm(photon)
-vacuum_2_dm = qt.ket2dm(vacuum_2)
-photon_2_dm = qt.ket2dm(photon_2)
+# Convert the defined kets to density matrices
+up_dm = qt.ket2dm(up)
+down_dm = qt.ket2dm(down)
+x_dm = qt.ket2dm(x)
+x_min_dm = qt.ket2dm(x_min)
+y_dm = qt.ket2dm(y)
+y_min_dm = qt.ket2dm(y_min)
 
-eye         = qt.qeye(2)
-tp          = qt.tensor
+# Define the identity operator for a two-level system
+eye = qt.qeye(2)
+
+# Alias for the tensor product function
+tp = qt.tensor
+
 
 def alpha_ket(alpha):
+    """
+    Create a superposition state with population ratio of alpha to (1 - alpha).
+
+    Parameters:
+    ----------
+    alpha : float
+        Population of down state
+
+    Returns:
+    --------
+    Qobj
+        Resulting superposition state.
+    """
     return np.sqrt(alpha) * down + np.sqrt(1 - alpha) * up
 
+
 def alpha_dm(alpha):
+    """
+    Create a density matrix of superposition state with population ratio of alpha to (1 - alpha).
+
+    Parameters:
+    ----------
+    alpha : float
+        Population of down state
+
+    Returns:
+    --------
+    Qobj
+        Density matrix of superposition state.
+    """
     return qt.ket2dm(alpha_ket(alpha))
 
-def vacuum_dim(dim):
+
+def vacuum(dim=2):
+    """
+    Create the vacuum state.
+
+    Parameters:
+    ----------
+    dim : int, optional
+        Dimension of the Hilbert space. Default is 2.
+    """
     return qt.basis(dim, 0)
 
-def photon_dim(dim):
+
+def vacuum_dm(dim=2):
+    """
+    Create a density matrix of vacuum state.
+
+    Parameters:
+    ----------
+    dim : int, optional
+        Dimension of the Hilbert space. Default is 2.
+    """
+    return qt.ket2dm(vacuum(dim=dim))
+
+
+def photon(dim=2):
+    """
+    Create the single-photon state.
+
+    Parameters:
+    ----------
+    dim : int, optional
+        Dimension of the Hilbert space. Default is 2.
+    """
     return qt.basis(dim, 1)
 
-def wcs_dim(dim, alpha):
-    return qt.coherent(dim, alpha)
 
-def create_dim(dim):
-    return qt.create(dim)
+def photon_dm(dim=2):
+    """
+    Create a density matrix of single-photon state.
 
-def displace_dim(dim, alpha):
-    return qt.displace(dim, alpha)
+    Parameters:
+    ----------
+    dim : int, optional
+        Dimension of the Hilbert space. Default is 2.
+    """
+    return qt.ket2dm(photon(dim=dim))

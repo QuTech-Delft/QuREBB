@@ -1,202 +1,326 @@
+import math
+
 import numpy as np
 import qutip as qt
-from . import NQobj as nq
-from .states import *
-import math
-from functools import lru_cache
 
-def cavity(r_u, t_u, l_u, r_d, t_d, l_d):
-    tot_d = np.abs(t_d)**2 + np.abs(r_d)**2 + np.abs(l_d)**2 
-    tot_u = np.abs(t_u)**2 + np.abs(r_u)**2 + np.abs(l_u)**2
+import lib.NQobj as nq
+import lib.states as st
+
+
+def conditional_amplitude_reflection(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
+    """
+    Physical Building Block for conditional amplitude reflection
+    Depending on the spin state, the photon can be reflected, transmitted, or lost.
+
+    Parameters:
+        r_u, t_u, l_u : float
+            reflection, transmission and loss for Up spin state
+        r_d, t_d, l_d : float
+            reflection, transmission and loss for Down spin state
+        dim : int
+            dimension of the photon space (default 2)
+
+    Returns:
+        cav_tot : NQobj
+            A cavity operator combining the effect of reflection,
+            transmission, and loss conditioned on the spin state.
+    """
+
+    # Check if the probabilities of reflection, transmission, and loss add up to 1 for both spin states.
+    tot_d = np.abs(t_d) ** 2 + np.abs(r_d) ** 2 + np.abs(l_d) ** 2
+    tot_u = np.abs(t_u) ** 2 + np.abs(r_u) ** 2 + np.abs(l_u) ** 2
     if not math.isclose(tot_d, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_d, t_d and l_d should add up to 1.') 
+        raise ValueError("The squares of r_d, t_d and l_d should add up to 1.")
     if not math.isclose(tot_u, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_u, t_u and l_u should add up to 1.')
+        raise ValueError("The squares of r_u, t_u and l_u should add up to 1.")
 
-    R     = nq.name(photon, 'R'   , kind='state')
-    R_vac = nq.name(vacuum, 'R'   , kind='state')
-    T     = nq.name(photon, 'T'   , kind='state')
-    T_vac = nq.name(vacuum, 'T'   , kind='state')
-    L     = nq.name(photon, 'loss', kind='state')
-    L_vac = nq.name(vacuum, 'L'   , kind='state')
-    u     = nq.name(up    , 'spin', kind='state')
-    d     = nq.name(down  , 'spin', kind='state')
+    # Definitions of operators and states.
+    r = nq.name(qt.destroy(dim), "R")
+    t = nq.name(qt.destroy(dim), "T")
+    l = nq.name(qt.destroy(dim), "loss")
+    u = nq.name(st.up, "spin")
+    d = nq.name(st.down, "spin")
 
-    cav =\
-    nq.tensor(u, r_u*R + t_u*T + l_u*L) * nq.tensor(u, R).dag() +\
-    nq.tensor(d, r_d*R + t_d*T + l_d*L) * nq.tensor(d, R).dag() +\
-    nq.tensor(R_vac, T_vac, L_vac) * R_vac.dag()
-    return cav
+    # Calculate the unitary transformations for the spin up state.
+    L_u = np.abs(l_u) ** 2
+    theta_loss_u = np.arctan(np.sqrt(L_u / (1 - L_u)))
+    r_prime_u = r_u / np.sqrt(1 - L_u)
+    t_prime_u = t_u / np.sqrt(1 - L_u)
 
-def cavity_unitary(r_u, t_u, l_u, r_d, t_d, l_d, dim=2):
-    tot_d = np.abs(t_d)**2 + np.abs(r_d)**2 + np.abs(l_d)**2 
-    tot_u = np.abs(t_u)**2 + np.abs(r_u)**2 + np.abs(l_u)**2
-    if not math.isclose(tot_d, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_d, t_d and l_d should add up to 1.') 
-    if not math.isclose(tot_u, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_u, t_u and l_u should add up to 1.')
+    theta_splitting_u = np.arctan(np.abs(t_prime_u) / np.abs(r_prime_u))
+    cav_u = (
+        (1j * np.angle(r_u) * r.dag() * r).expm()
+        * (1j * np.angle(t_u) * t.dag() * t).expm()
+        * (theta_splitting_u * (r.dag() * t - r * t.dag())).expm()
+        * (theta_loss_u * (r.dag() * l - r * l.dag())).expm()
+    )
 
-    R     = nq.name(qt.destroy(dim), 'R'   )
-    T     = nq.name(qt.destroy(dim), 'T'   )
-    L     = nq.name(qt.destroy(dim), 'loss')
-    u     = nq.name(up    , 'spin')
-    d     = nq.name(down  , 'spin')
+    # Calculate the unitary transformations for the spin down state.
+    L_d = np.abs(l_d) ** 2
+    theta_loss_d = np.arctan(np.sqrt(L_d / (1 - L_d)))
+    r_prime_d = r_d / np.sqrt(1 - L_d)
+    t_prime_d = t_d / np.sqrt(1 - L_d)
 
-    theta_loss_u = np.arctan( np.sqrt((1-l_u)/(l_u)) )
-    theta_splitting_u = np.arctan( r_u/t_u )
-    cav_u = ( 1j* (np.angle(r_u)*R.dag()*R) ).expm() *\
-            ( 1j* (np.angle(t_u)*T.dag()*T) ).expm() *\
-            ( theta_splitting_u * (R.dag()*T - R*T.dag()) ).expm() *\
-            ( theta_loss_u * (R.dag()*L - R*L.dag()) ).expm() 
+    theta_splitting_d = np.arctan(np.abs(t_prime_d) / np.abs(r_prime_d))
+    cav_d = (
+        (1j * (np.angle(r_d) * r.dag() * r)).expm()
+        * (1j * (np.angle(t_d) * t.dag() * t)).expm()
+        * (theta_splitting_d * (r.dag() * t - r * t.dag())).expm()
+        * (theta_loss_d * (r.dag() * l - r * l.dag())).expm()
+    )
 
-    theta_loss_d = np.arctan( np.sqrt((1-l_d)/l_d) )
-    theta_splitting_d = np.arctan( r_d/t_d )
-    cav_d = ( 1j* (np.angle(r_d)*R.dag()*R) ).expm() *\
-            ( 1j* (np.angle(t_d)*T.dag()*T) ).expm() *\
-            ( theta_splitting_d * (R.dag()*T - R*T.dag()) ).expm() *\
-            ( theta_loss_d * (R.dag()*L - R*L.dag()) ).expm() 
-    cav_tot=nq.tensor(u.proj(), cav_u) + nq.tensor(d.proj(), cav_d)
+    # Combine the unitary transformations for both spin states.
+    cav_tot = nq.tensor(u.proj(), cav_u) + nq.tensor(d.proj(), cav_d)
+
     return cav_tot
 
-def cavity_single_sided(r_u, l_u, r_d, l_d):
-    tot_d = np.abs(r_d)**2 + np.abs(l_d)**2 
-    tot_u = np.abs(r_u)**2 + np.abs(l_u)**2
+
+def conditional_phase_reflection(r_u, l_u, r_d, l_d, dim=2):
+    """
+    Physical Building Block for conditional phase reflection
+    Depending on the spin state, the photon can be reflected or lost.
+    Parameters:
+        r_u, l_u : float
+            reflection and loss for Up spin state
+        r_d, l_d : float
+            reflection and loss for Down spin state
+        dim : int
+            dimension of the photon space (default 2)
+
+    Returns:
+        cav_tot : NQobj
+            A cavity operator combining the effect of reflection and loss
+            conditioned on the spin state.
+    """
+
+    # Check if the probabilities of reflection, transmission, and loss add up to 1 for both spin states.
+    tot_d = np.abs(r_d) ** 2 + np.abs(l_d) ** 2
+    tot_u = np.abs(r_u) ** 2 + np.abs(l_u) ** 2
     if not math.isclose(tot_d, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_d and l_d should add up to 1.') 
+        raise ValueError("The squares of r_d and l_d should add up to 1.")
     if not math.isclose(tot_u, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_u and l_u should add up to 1.')
-    
-    R     = nq.name(photon, 'R'   )
-    R_vac = nq.name(vacuum, 'R'   )
-    L     = nq.name(photon, 'loss')
-    L_vac = nq.name(vacuum, 'loss'  )
-    u     = nq.name(up    , 'spin')
-    d     = nq.name(down  , 'spin')
+        raise ValueError("The squares of r_u and l_u should add up to 1.")
 
-    cav =\
-    nq.tensor(u, r_u*R + l_u*L) * nq.tensor(u, R).dag() +\
-    nq.tensor(d, r_d*R + l_d*L) * nq.tensor(d, R).dag() +\
-    nq.tensor(R_vac, L_vac) * R_vac.dag()
-    return cav
+    # Definitions of operators and states.
+    R = nq.name(qt.destroy(dim), "R")
+    L = nq.name(qt.destroy(dim), "loss")
+    u = nq.name(st.up, "spin")
+    d = nq.name(st.down, "spin")
 
+    # Calculate the unitary transformations for the spin up state.
+    theta_loss_u = np.arctan(np.abs(l_u) / np.abs(r_u))
+    cav_u = (
+        (1j * (np.angle(r_u) * R.dag() * R)).expm()
+        * (1j * (np.angle(l_u) * L.dag() * L)).expm()
+        * (theta_loss_u * (L.dag() * R - L * R.dag())).expm()
+    )
 
-def cavity_single_sided_unitary(r_u, l_u, r_d, l_d, dim=2):
-    tot_d = np.abs(r_d)**2 + np.abs(l_d)**2 
-    tot_u = np.abs(r_u)**2 + np.abs(l_u)**2
-    if not math.isclose(tot_d, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_d and l_d should add up to 1.') 
-    if not math.isclose(tot_u, 1, abs_tol=1e-6):
-        raise ValueError('The squares of r_u and l_u should add up to 1.')
-    
-    R     = nq.name(qt.destroy(dim), 'R'   )
-    L     = nq.name(qt.destroy(dim), 'loss')
-    u     = nq.name(up    , 'spin')
-    d     = nq.name(down  , 'spin')
+    # Calculate the unitary transformations for the spin down state.
+    theta_loss_d = np.arctan(np.abs(l_d) / np.abs(r_d))
+    cav_d = (
+        (1j * (np.angle(r_d) * R.dag() * R)).expm()
+        * (1j * (np.angle(l_d) * L.dag() * L)).expm()
+        * (theta_loss_d * (L.dag() * R - L * R.dag())).expm()
+    )
 
-    theta_loss_u = np.arctan( np.abs(l_u)/np.abs(r_u) )
-    cav_u = ( 1j* (np.angle(r_u)*R.dag()*R) ).expm() *\
-            ( 1j* (np.angle(l_u)*L.dag()*L) ).expm() *\
-            ( theta_loss_u * (L.dag()*R - L*R.dag()) ).expm()
+    # Combine the unitary transformations for both spin states.
+    cav_tot = nq.tensor(u.proj(), cav_u) + nq.tensor(d.proj(), cav_d)
+    return cav_tot
 
-    theta_loss_d = np.arctan( np.abs(l_d)/np.abs(r_d) )
-    cav_d = ( 1j* (np.angle(r_d)*R.dag()*R) ).expm() *\
-            ( 1j* (np.angle(l_d)*L.dag()*L) ).expm() *\
-            ( theta_loss_d * (L.dag()*R - L*R.dag()) ).expm()
-
-    return nq.tensor(u.proj(), cav_u) + nq.tensor(d.proj(), cav_d)
-
-
-def beamsplitter_single_input(transmission=.5):
-    A     = nq.name(photon, 'A')
-    A_vac = nq.name(photon, 'A')
-    B     = nq.name(photon, 'B')
-    B_vac = nq.name(photon, 'B')
-
-    BS = \
-    nq.tensor(np.sqrt(transmission)*A + np.sqrt(1-transmission)*B) * A.dag()# +\
-    nq.tensor(A_vac, B_vac) * A_vac.dag()
-    return BS
 
 def unitary_beamsplitter(theta=0, dim=2):
-    A = nq.name(qt.destroy(dim), 'A')
-    B = nq.name(qt.destroy(dim), 'B')
-    #return (1j*theta*(A.dag()*B + A*B.dag())).expm()
-    return (theta*(A.dag()*B - A*B.dag())).expm()
+    """
+    Physical Building Block of a beam splitter.
+    The parameter `theta` determines the proportion of split between the two paths.
+
+    Parameters:
+        theta : float
+            Beam splitter rotation angle. Determines the splitting ratio.
+            0      -> perfect transmission
+            pi/4   -> split equally to reflection and transmission.
+        dim : int
+            Dimension of the photonic mode, default is 2 (vacuum and single-photon state).
+
+    Returns:
+        BS : NQobj
+            Beam splitter operator
+    """
+
+    A = nq.name(qt.destroy(dim), "A")
+    B = nq.name(qt.destroy(dim), "B")
+
+    BS = (theta * (A.dag() * B - A * B.dag())).expm()
+
+    return BS
 
 
 def loss(loss=0.5, dim=2):
-    A = nq.name(qt.destroy(dim), 'A')
-    L = nq.name(qt.destroy(dim), 'loss')
-    theta= np.arctan( np.sqrt( (loss)/(1-loss) ) )
-    return ( theta * (A.dag()*L - A*L.dag()) ).expm()
+    """
+    Physical Building Block for photon loss.
+    The parameter `loss` is the probability of photon loss.
 
+    Parameters:
+        loss : float
+            Loss factor representing the probability of photon loss.
+            0   -> no loss
+            0.5 -> 50% chance of loss
+            1   -> complete loss
+        dim : int
+            Dimension of the photonic mode, default is 2 (vacuum and single-photon state).
+
+    Returns:
+        LossOp : NQobj
+            Photon loss operator.
+    """
+
+    A = nq.name(qt.destroy(dim), "A", "oper")
+    L = nq.name(qt.destroy(dim), "loss", "oper")
+
+    theta = np.arctan(np.sqrt((loss) / (1 - loss)))
+
+    LossOp = (theta * (A.dag() * L - A * L.dag())).expm()
+
+    return LossOp
 
 
 def waveplate(theta=0, dim=2):
-    r=nq.name(qt.destroy(dim), 'H')
-    l=nq.name(qt.destroy(dim), 'V')
+    """
+    Physical Building Block of a waveplate.
+    Change the polarization-encoded photon statea.
+    Uses H and V as default names.
 
-    return (-1j*theta*(r.dag()*l + r*l.dag())).expm()
+    Parameters:
+        theta : float
+            Waveplate angle.
+            0       -> no change in polarization
+            pi/4    -> rotates the polarization by 45 degrees
+        dim : int
+            Dimension of the photonic mode, default is 2 (vacuum and single-photon state).
 
+    Returns:
+        WP : NQobj
+            Waveplate operator.
+    """
 
-def emitter_pi_pulse(dim=2):
-    
-    photon = nq.name(qt.destroy(dim), 'photon')
-    I = nq.name(qt.qeye(dim), 'photon', 'oper')
-    u = nq.name(up, 'spin')
-    d = nq.name(down, 'spin')
-    
-    return nq.tensor(u.proj(), I) + nq.tensor(d.proj(), photon.dag())
+    r = nq.name(qt.destroy(dim), "H")
+    l = nq.name(qt.destroy(dim), "V")
 
-def emitter_pi_pulse_weighted(etas,dim=2):
+    WP = (-1j * theta * (r.dag() * l + r * l.dag())).expm()
 
-    photons = []
-    Is = []
-    
-    for i,e in enumerate(etas):
-        photons.append(nq.name(qt.destroy(dim), 'photon_{}'.format(i)))
-        Is.append(nq.name(qt.qeye(dim), 'photon_{}'.format(i), 'oper'))
-    u = nq.name(up, 'spin')
-    d = nq.name(down, 'spin')
-    dm = nq.tensor(u.proj(), *Is)
-    for i,e in enumerate(etas):
-        dm += e*nq.tensor(d.proj(), photons[i].dag())
-    return  dm
-
-def emitter_error(dim=2):
-    photon = nq.name(qt.destroy(dim), 'photon')
-    I = nq.name(qt.qeye(dim), 'photon', 'oper')
-    u = nq.name(up, 'spin')
-    d = nq.name(down, 'spin')
-    
-    return nq.tensor(d.proj(), photon.dag())
+    return WP
 
 
-def emitter_loss(dim=2):
-    
-    photon = nq.name(qt.destroy(dim), 'photon')
-    I = nq.name(qt.qeye(dim), 'photon', 'oper')
-    u = nq.name(up, 'spin')
-    d = nq.name(down, 'spin')
-    
-    return nq.tensor(u.proj(), I) + nq.tensor(d.proj(), I)
+def spontaneous_emission_ideal(dim=2):
+    """
+    Physical Building Block of an ideal spin-dependent spontaneous emission (SPI).
+    Ideal case where the emission is perfectly spin-dependent.
+    Down is the bright state, Up is the dark state
 
-def emitter_twophoton(dim=3):
-    photon = nq.name(qt.destroy(dim), 'photon')
-    I = nq.name(qt.qeye(dim), 'photon', 'oper')
-    u = nq.name(up, 'spin')
-    d = nq.name(down, 'spin')
-    
-    return (nq.tensor(u.proj(), I) + nq.tensor(d.proj(), photon.dag()**2/np.sqrt(2)))
+    Parameters:
+        dim : int
+            Dimension of the photonic mode, default is 2 (vacuum and single-photon state).
 
-def emitter_twophoton_error(dim=3):
-    photon = nq.name(qt.destroy(dim), 'photon')
-    I = nq.name(qt.qeye(dim), 'photon', 'oper')
-    u = nq.name(up, 'spin')
-    d = nq.name(down, 'spin')
-    
-    return nq.tensor(d.proj(), photon.dag()**2/np.sqrt(2))
+    Returns:
+        SE_ideal : NQobj
+            Operator for ideal spin-dependent spontaneous emission.
+    """
 
-def phase(theta=0,dim=2):
-    a = nq.name(qt.destroy(dim), 'photon')
-    return (1j*theta*a.dag()*a).expm()
+    photon = nq.name(qt.destroy(dim), "photon")
+    I = nq.name(qt.qeye(dim), "photon", "oper")
+    u = nq.name(st.up, "spin")
+    d = nq.name(st.down, "spin")
+
+    SE_ideal = nq.tensor(u.proj(), I) + nq.tensor(d.proj(), photon.dag())
+
+    return SE_ideal
+
+
+def spontaneous_emission_error(dim=2):
+    """
+    Physical Building Block of an erroneous spin-dependent spontaneous emission (SPI).
+    Models emission errors like loss or unintended emissions into extra modes.
+    Down is the bright state, and emission in this context signifies an error.
+
+    Parameters:
+        dim : int
+            Dimension of the photonic mode, default is 2 (vacuum and single-photon state).
+
+    Returns:
+        SE_error : NQobj
+            Operator for erroneous spin-dependent spontaneous emission.
+    """
+
+    photon = nq.name(qt.destroy(dim), "photon")
+    d = nq.name(st.down, "spin")
+
+    SE_error = nq.tensor(d.proj(), photon.dag())
+
+    return SE_error
+
+
+def spontaneous_two_photon_emission(dim=3):
+    """
+    Physical Building Block of a two-photon emission error in spin-dependent spontaneous emission (SPI).
+    Models the case where two photons are emitted simultaneously.
+    Down is the bright state.
+
+    Parameters:
+        dim : int
+            Dimension of the photonic mode, default is 3 (vacuum, single-photon, and two-photon states).
+
+    Returns:
+        SE_two_photon : NQobj
+            Operator for two-photon emission error in spin-dependent spontaneous emission.
+    """
+
+    photon = nq.name(qt.destroy(dim), "photon")
+    d = nq.name(st.down, "spin")
+
+    SE_two_photon = nq.tensor(d.proj(), photon.dag() ** 2 / np.sqrt(2))
+
+    return SE_two_photon
+
+
+def phase(theta=0, dim=2):
+    """
+    Physical Building Block of a phase shift of a photonic mode.
+
+    Parameters:
+        theta : float
+            Phase shift.
+        dim : int
+            Dimension of the photonic mode, default is 2 (vacuum and single-photon state).
+
+    Returns:
+        phase_operator : NQobj
+            Phase shift operator.
+    """
+
+    a = nq.name(qt.destroy(dim), "photon")
+
+    phase_operator = (1j * theta * a.dag() * a).expm()
+
+    return phase_operator
+
+
+def no_vacuum_projector(name, dim):
+    """
+    Physical Building Block for a no-vacuum projector.
+    Projects state except the vacuum state, ensuring the presence of a photon.
+    Useful for heralding (photodetection).
+
+    Parameters:
+        name : str
+            Name of the photonic mode.
+        dim : int
+            Dimension of the photonic mode.
+
+    Returns:
+        no_vacuum : NQobj
+            Proejctor excluding the vacuum state.
+    """
+    identity = nq.name(qt.qeye(dim), name, "oper")
+    vacuum = nq.name(st.vacuum_dm(dim), name, "oper")
+
+    no_vacuum = identity - vacuum
+    return no_vacuum

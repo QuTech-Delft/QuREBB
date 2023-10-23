@@ -1,371 +1,312 @@
-from lib.states import *
-import lib.NQobj as nq
-import lib.quantum_optical_modelling as qom
-import lib.PBB as pbb
-import lib.LBB as lbb
-
+import datetime
+import functools
+import itertools
+import multiprocessing as multi
+import time
+from copy import copy
+from os.path import join
+from typing import List, Optional
 
 import numpy as np
 import qutip as qt
-import scipy.constants as cst
-import matplotlib.pyplot as plt
+import xarray as xr
 
-import multiprocessing as multi
-import functools, itertools
-import time
-from tqdm.notebook import tqdm
+import lib.LBB as lbb
+import lib.NQobj as nq
+
+qt.settings.auto_tidyup = False
 
 
 class Protocol:
-	"""
-	this class handles a two-qubit entanaglement protocol,
-	holds the protocol parameters, photon encoding and density matrix
-
-	Attributes:
-		name: (str) the protocol name.
-		parmeters: (dict) dictionary containing the parameters necessary for protocol operation.
-		dim: (int) dimension of the photon space. Default is 3 as this is the minimum for using single photons and HOM interference.
-	
-	Additional arguments:
-		photon_names: (list) list of names for the photonic modes. NB: should this be a mandatory attribute?
-		start_state: (NQobj) start state of the protocol
-		target_state: (NQobj) the target final state of the protocol (used to calculate fidelity)
-
-	"""
-
-	def __init__(self, name:str, parameters:dict, dim:int =3, **kwargs):
-
-		self.parameters : dict = parameters
-		self.sweep_params : dict = kwargs.pop('sweep_params', None)
-
-		self.name: str = name
-		self.dm : nq.NQobj = None
-		self.dm_init : nq.NQobj = None
-
-		self.fidelity_opt = None
-		self.rate_opt = None
-
-		# default nodes are Alice and Bob
-		self.alice = nq.name(qt.qeye(2), 'Alice', kind='state')
-		self.bob = nq.name(qt.qeye(2), 'Bob', kind='state')
-
-		self.photon_names: [str] = kwargs.pop('photon_names', [])
-		self.photon_modes: [nq.NQobj] = []
-		self.photon_spd_projectors: [nq.NQobj] = []
-
-		self.dim: int = parameters.pop('dim', dim)
-		self.target_state: nq.NQobj = None
-		self.herald_state: nq.NQobj = None
-
-		self._perpare_photons()
-		self._prepare_blank_dm()
-		self._prepare_photon_spd_projectors()
-		self.start_state = kwargs.pop('start_state', self._default_start_state())
-		self.herald_state = kwargs.pop('herald_state', self._default_herald_state())
-		self.target_state = kwargs.pop('target_state', self._default_target_state())
-
-		self.save = kwargs.pop('save',False)
-		self.save_folder = './'
-		self.save_path = self.save_folder + self.name + '.h5'
-		if self.save:
-			self._create_data_file()
-
-
-
-	def _perpare_photons(self) -> None:
-		"""
-		Prepares vacuum photon modes for each photon name present
-		"""
-
-		for name in self.photon_names:
-			self.photon_modes.append(
-						nq.name(vacuum_dim(self.dim), name, kind='state')
-					)
-
-	def _prepare_photon_spd_projectors(self) -> None:
-		"""
-		Prepares projectors for the single photon detection with non photon-resolving detectors (projects on everything but vacuum)
-		"""
-		for name in self.photon_names:
-			self.photon_spd_projectors.append( 
-						nq.name(qt.qeye(self.dim)-vacuum_dim(self.dim).proj(), name, 'oper') 
-						)
-
-	def _prepare_blank_dm(self) -> None:
-		"""
-		prepares a "blank" (identity) density matrix with the right mode names and dimensions
-		"""
-		#photon_dm = [nq.ket2dm(x) for x in self.photon_modes]
-		photon_dm = [nq.name(qt.qeye(self.dim), x, 'state') for x in self.photon_names]
-		self.dm = nq.tensor( self.alice, self.bob, *photon_dm)
-
-	def _default_start_state(self) -> nq.NQobj:
-		""" 
-		Sets the default start state. Must be defined by subclasses according to the specific protocol 
-		"""
-
-		return nq.tensor( nq.name(x, 'Alice', 'state'), nq.name(x, 'Bob', 'state'), *self.photon_modes).unit()
-
-	def _default_herald_state(self) -> nq.NQobj:
-		""" 
-		Sets the default herald state. Must be defined by subclasses according to the specific protocol 
-		"""
-		photon_qeyes = []
-		vacuum_projs = []
-		for n in self.photon_names:
-			photon_qeyes.append(nq.name(qt.qeye(self.dim), n, 'oper'))
-
-		for v in self.photon_modes:
-			vacuum_projs.append(v.proj())
-		return nq.tensor(*photon_qeyes) - nq.tensor(*vacuum_projs)
-
-	def _default_target_state(self) -> nq.NQobj:
-		""" 
-		Sets the default target state. Must be defined by subclasses according to the specific protocol 
-		"""
-
-		return (nq.tensor( nq.name(up, 'Alice', 'state'), nq.name(down , 'Bob', 'state')) +\
-				nq.tensor( nq.name(down, 'Alice', 'state'), nq.name(up, 'Bob', 'state') )).unit()
-
-	def run(self) -> (float, float):
-		""" Runs the protocol sequence.
-			returns:
-				fidelity (float)
-				rate (float)
-
-		"""
-		pass
-
-	def run_with_params(self, params):
-		""" Runs the protocol sequence with different parameters than the own 
-			returns:
-				fidelity (float)
-				rate (float)
-		"""
-		save_params = self.parameters
-		self.parameters = params
-		f,r = self.run()
-		self.paramters = save_params
-		return f,r
-
-	def do_lbb(self, LBB,  photon_names=None, spin_name=None, parameters = None, **kwargs):
-		""" Makes a logical building block act on the densituy matrix. Uses default parameters by default"""
-		if parameters is None:
-			parameters = self.parameters
-
-		dm_out = LBB(self.dm, spin_name=spin_name, photon_names=photon_names, parameters=parameters, dim=self.dim, **kwargs)
-		self.dm=dm_out
-
-	def do_measurement(self, measurement_lbb, measurement_state, *args, **kwargs):
-		""" Makes a measurement LBB act on the density matrix """
-		dm_out = measurement_lbb(self.dm, measurement_state, *args, **kwargs)
-		self.dm=dm_out
-
-
-	def prepare(self):
-		"""
-		Prepares the initial density matrix by projecting the density matrix to the start state
-		"""
-		self._prepare_blank_dm()
-		self.dm_init = self.start_state.proj()*self.dm*self.start_state.proj()
-
-	def metrics(self, **kwargs):
-		"""
-		Calculates fidelity and success probability versus target spin state
-		"""
-		use_state = kwargs.get('target_state', self.target_state)
-		rate = self.dm.tr()
-		fid = nq.fidelity(self.dm.unit(), nq.ket2dm(use_state))**2
-		return fid, rate		
-
-	def get_param(self, name:str):
-		try:
-			return self.parameters[name]
-		except:
-			print('No parameter named {}'.format(name))
-			return None
-
-	def set_param(self, name:str, value):
-		try: 
-			self.parameters[name] = value
-		except:
-			print('Operation failed. Maybe parameter {} does not exists.'.format(name))
-
-
-	""" 
-	Utilities for saving, sweeping and optimizing
-	"""
-	def optimize(self):
-			pass
-
-	def update_pars_and_run(self, par_names, *args):
-		for i,el in enumerate(par_names):
-			self.parameters[el] = args[i]
-		return self.run()
-
-	def update_pars_and_run_spe(self, par_names, *args):
-		for i,el in enumerate(par_names):
-			self.parameters[el] = args[i]
-		return self.run_spe()
-
-	def update_pars_and_sweep(self, par_names, *args):
-		for i,el in enumerate(par_names):
-			self.parameters[el] = args[i]
-		return self.multiprocess_sweep()
-
-	def multiprocess_sweep(self, chunksize=1, spe_only = False):
-		par_names = list(self.sweep_params.keys())
-
-
-		#wrap = lambda sweep_list : update_pars_and_run(protocol, params,par_names,*sweep_list)
-		wrap = functools.partial(self.update_pars_and_run, par_names)
-		if spe_only:
-			wrap = functools.partial(self.update_pars_and_run_spe, par_names)
-
-
-
-		pars = [self.sweep_params[x]['range'] for x in par_names]
-		par_dimensions = [len(x) for x in pars]
-		# grid = np.array(np.meshgrid(*pars))
-		# XY = np.array([*[x.flatten() for x in grid]]).T
-		# args=list(XY)
-
-		ncpu = multi.cpu_count()
-		t0=time.time()
-		with multi.Pool(ncpu) as processing_pool:
-			# accumulate results in a dictionary
-			#results = processing_pool.starmap(wrap, args , chunksize=chunksize)
-			results = processing_pool.starmap(wrap, itertools.product(*pars))
-		t_sim=time.time() - t0
-		print('Sweep time with multi was {:.3f} s'.format(t_sim))
-
-	    
-		ff = np.array([x[0] for x in results]).reshape(*par_dimensions).T
-		rr = np.array([x[1] for x in results]).reshape(*par_dimensions).T
-
-		self.fidelity_opt = ff
-		self.rate_opt = rr
-
-		return ff,rr
-
-
-	def save_data(self):
-		pass
-
-	def _create_data_file(self):
-		pass
-
-class SinglePhotonTwoModes(Protocol):
-	"""
-	Protocols with a single photon ancoded in two modes (e.g. polarization or time bin)
-	"""
-
-	def __init__(self, name:str, parameters: dict, dim:int=3, *args, **kwargs):
-
-		super().__init__(name, parameters, dim=dim, *args, **kwargs)
-
-		
-	def _default_start_state(self):
-		"""
-		Start state has Alice and Bob in x, and photon in (E+L)
-		"""
-		if self.parameters['alpha'] is None:
-			creators = (nq.name(create_dim(self.dim), self.photon_names[0], 'oper') +\
-						 nq.name(create_dim(self.dim), self.photon_names[1], 'oper'))
-		else:
-			creators = (nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[0], 'oper') +\
-						 nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[1], 'oper'))
-		
-		state_oper = nq.tensor( nq.name(qt.qeye(2), 'Alice', 'oper'), nq.name(qt.qeye(2), 'Bob', 'oper'), creators)
-		return (state_oper * super()._default_start_state()).unit()
-
-
-	# def prepare(self):
-	# 	self.dm_init = self.start_state.proj()*self.dm*self.start_state.proj()
-
-class TwoPhotonsTwoModes(Protocol):
-
-	"""
-	Protocols with two photons encoded in two modes each (e.g. reflection with midpoint detector and two sources)
-	"""
-
-	def __init__(self, name:str, parameters: dict, dim:int=3, *args, **kwargs):
-
-		super().__init__(name, parameters, dim=dim, *args, **kwargs)
-
-	def _default_start_state(self):
-		"""
-		Start state has Alice and Bob in x, and photon in (E+L)
-		"""
-		if self.parameters['alpha'] is None:
-			creators = nq.tensor( 
-						(nq.name(create_dim(self.dim), self.photon_names[0], 'oper') +\
-						 nq.name(create_dim(self.dim), self.photon_names[1], 'oper')),
-						 (nq.name(create_dim(self.dim), self.photon_names[2], 'oper') +\
-						 nq.name(create_dim(self.dim), self.photon_names[3], 'oper'))
-						 )
-		else:
-			creators = nq.tensor( 
-						(nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[0], 'oper') +\
-						 nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[1], 'oper')),
-						 (nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[2], 'oper') +\
-						 nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[3], 'oper'))
-						 )
-		
-		state_oper = nq.tensor( nq.name(qt.qeye(2), 'Alice', 'oper'), nq.name(qt.qeye(2), 'Bob', 'oper'), creators)
-		return (state_oper * super()._default_start_state()).unit()
-
-class SinglePhotonEmission(Protocol):
-	def __init__(self, name:str, parameters: dict, dim:int=3, *args, **kwargs):
-
-		super().__init__(name, parameters, dim=dim, *args, **kwargs)
-
-		self.photon_names_incoherent: [str] = [x+str('_incoherent') for x in self.photon_names]
-		self.photon_modes_incoherent: [nq.NQobj] = [x.rename(x.name(), x.name()+str('_incoherent')) for x in self.photon_modes]
-
-	# def _perpare_photons_incoherent(self) -> None:
-	# 	"""
-	# 	Prepares vacuum photon modes for each photon name present
-	# 	"""
-
-	# 	for name in self.photon_names_incoherent:
-	# 		self.photon_modes_incoherent.append(
-	# 					nq.name(vacuum_dim(self.dim), name, kind='state')
-	# 				)
-
-	def _prepare_blank_dm(self) -> None:
-		"""
-		prepares a "blank" (identity) density matrix with the right mode names and dimensions
-		"""
-		#photon_dm = [nq.ket2dm(x) for x in self.photon_modes]
-		photon_dm = [nq.name(qt.qeye(self.dim), x, 'state') for x in self.photon_names]
-		self.dm = nq.tensor( self.alice, self.bob, *photon_dm)
-
-	def _default_start_state(self) -> nq.NQobj:
-		""" 
-		Sets the default start state. Must be defined by subclasses according to the specific protocol 
-		"""
-
-		return nq.tensor( nq.name(x, 'Alice', 'state'), nq.name(x, 'Bob', 'state'), *self.photon_modes).unit()
-
-	def _default_start_state(self):
-		"""
-		Start state has Alice and Bob in x, and photon in (E+L)
-		"""
-		if self.parameters['alpha'] is None:
-			creators = nq.tensor( 
-						(nq.name(create_dim(self.dim), self.photon_names[0], 'oper') +\
-						 nq.name(create_dim(self.dim), self.photon_names[1], 'oper')),
-						 (nq.name(create_dim(self.dim), self.photon_names[2], 'oper') +\
-						 nq.name(create_dim(self.dim), self.photon_names[3], 'oper'))
-						 )
-		else:
-			creators = nq.tensor( 
-						(nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[0], 'oper') +\
-						 nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[1], 'oper')),
-						 (nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[2], 'oper') +\
-						 nq.name(displace_dim(self.dim, self.parameters['alpha']), self.photon_names[3], 'oper'))
-						 )
-		
-		state_oper = nq.tensor( nq.name(qt.qeye(2), 'Alice', 'oper'), nq.name(qt.qeye(2), 'Bob', 'oper'), creators)
-		return (state_oper * super()._default_start_state()).unit()
+    """
+    This class handles a two-qubit entanglement protocol.
+    This holds protocol parameters, photon encoding and density matrix.
+
+    Attributes:
+            name : str
+                Name of a protocol.
+            parmeters : dict
+                Dictionary of parameters necessary for the operation of the protocol.
+            dim : int
+                Dimension of photonic modes.
+                Default is 3 (minimum for using single photons and HOM interference).
+
+    Additional arguments:
+            photon_names : list
+                List of names for the photonic modes.
+            start_state : NQobj
+                Initial state of the protocol
+            target_state : NQobj
+                Target state of the protocol (for fidelity calculation).
+
+    """
+
+    def __init__(self, parameters: dict):
+        """
+        Initialize the Protocol class.
+
+        Parameters:
+        ----------
+        parameters : dict
+            Dictionary of parameters of protocol.
+        """
+
+        self.parameters: dict = parameters
+        self.dm: nq.NQobj = None
+        self.dm_init: nq.NQobj = None
+        self.dm_heralded: List[nq.NQobj] = None
+
+        # Check for dimension of photonic mode in the parameters, else raise an error
+        if "dim" in parameters:
+            self.dim = parameters["dim"]
+        else:
+            raise ValueError("The entry 'dim' needs to be present in parameters")
+
+        self.target_states: List[nq.NQobj] = []  # target spin state
+        self.herald_projectors: List[nq.NQobj] = []  # heralding operator
+
+        # Fidelity to be calculated
+        self.fidelity: Optional[list] = None
+        self.fidelity_total: Optional[float] = None
+
+        # Entanglement generation rate to be calculated
+        self.rate: Optional[list] = None
+        self.rate_total: Optional[float] = None
+
+    def run(self):
+        """
+        Execute the protocol sequence.
+
+        Returns:
+        -------
+        tuple
+            Tuple containing fidelity and rate of the protocol.
+        """
+        self.dm = self.dm_init
+        self.protocol_sequence()
+        fidelity, rate = self.herald()
+        return fidelity, rate
+
+    def protocol_sequence(self):
+        """
+        Defines the protocol sequence. To be implemented in subclasses.
+        """
+        pass
+
+    def do_lbb(self, LBB, **kwargs):
+        """
+        Apply a logical building block to the density matrix.
+
+        Parameters:
+        ----------
+        LBB : function of LBB.py
+            Logical building block.
+        **kwargs : dict
+            Additional keyword arguments.
+        """
+        kwargs.update(self.parameters)
+
+        self.dm = LBB(dm_in=self.dm, **kwargs)
+
+    def do_lbb_on_photons(self, LBB, photon_names, **kwargs):
+        """
+        Apply a logical building block acting on photonic modes.
+
+        Parameters:
+        ----------
+        LBB : function (of LBB.py)
+            Logical building block.
+        photon_names : list of str
+            Name of photonic modes which LBB is applied to.
+        **kwargs : dict
+            Additional keyword arguments.
+        """
+
+        for photon_name in photon_names:
+            self.do_lbb(LBB, photon_name=photon_name, **kwargs)
+
+    def herald(self):
+        """
+        Perform a heralding operation --- projection --- to the density matrix.
+        This method also calculates metrics for each processed matrix, and updates the
+        instance's fidelity and rate attributes.
+
+        Returns:
+        -------
+        tuple
+            A tuple containing the fidelity and rate after heralding.
+        """
+
+        # Create a copy of the current density matrix
+        dm = copy(self.dm)
+
+        # Initialize lists to store fidelity, rate, and heralded density matrices
+        fidelity = []
+        rate = []
+        dm_heralded = []
+
+        # Iterate over herald projectors and target states
+        for herald_projector, target_state in zip(self.herald_projectors, self.target_states):
+
+            # Apply the herald operation to the density matrix using the given projector
+            self.do_lbb(lbb.herald, herald_projector=herald_projector)
+
+            # Calculate the fidelity and rate metrics for the current state
+            metrics = self.metrics(target_state)
+            fidelity.append(metrics[0])
+            rate.append(metrics[1])
+
+            # Store the heralded density matrix
+            dm_heralded.append(self.dm)
+
+            # Reset the density matrix to its original state before the next iteration
+            self.dm = copy(dm)
+
+        # Update class attributes with calculated values
+        self.fidelity = fidelity
+        self.fidelity_total = np.average(np.array(fidelity), weights=np.array(rate))
+        self.rate = rate
+        self.rate_total = sum(rate)
+        self.dm_heralded = dm_heralded
+        return self.fidelity_total, self.rate_total
+
+    def metrics(self, target_state):
+        """
+        Calculate the fidelity and success probability of the current density matrix for a given target spin state.
+
+        Parameters:
+        ----------
+        target_state : NQobj
+            The target quantum state to which the fidelity of the current state is compared.
+
+        Returns:
+        -------
+        tuple
+            A tuple containing the fidelity and success rate of the current density matrix
+            with respect to the target state.
+        """
+
+        # Calculate the fidelity between the current state and the target state
+        fidelity = nq.fidelity(self.dm.unit(), nq.ket2dm(target_state)) ** 2
+
+        # Calculate the trace (success probability) of the current density matrix
+        rate = self.dm.tr()
+
+        return fidelity, rate
+
+
+class ProtocolSweep:
+    def __init__(
+        self, protocol, parameters, sweep_parameters, save_results=False, save_folder=None, save_name="dataset"
+    ):
+
+        self.protocol = protocol
+        self.parameters = parameters
+        self.sweep_parameters = sweep_parameters
+        self.save_results = save_results
+        self.save_folder = save_folder
+        self.save_name = save_name
+        if save_results:
+            if save_folder is None or save_name is None:
+                raise ValueError("If save_result is True, save_folder and save_name can't be None.")
+        self.dataset = xr.Dataset()
+        self.dataset_fidelity_rate = xr.Dataset()
+
+    def update_parameters_and_run(self, sweep_parameter_names, *args):
+        parameters = copy(self.parameters)
+        update_parameters = dict(zip(sweep_parameter_names, args))
+        parameters.update(update_parameters)
+        protocol = self.protocol(parameters=parameters)
+        return protocol.run()
+
+    def multiprocess_sweep(self):
+        sweep_parameter_names = list(self.sweep_parameters.keys())
+        wrap = functools.partial(self.update_parameters_and_run, sweep_parameter_names)
+
+        parameter_lists = list(self.sweep_parameters.values())
+        data_array_size = [len(parameter_list) for parameter_list in parameter_lists]
+        parameter_values_iter = itertools.product(*[list(array) for array in parameter_lists])
+
+        time_start = time.time()
+        with multi.Pool() as processing_pool:
+            results = processing_pool.starmap(wrap, parameter_values_iter)
+        time_sim = time.time() - time_start
+        print(f"Sweep time with multi was {time_sim:.3f} s")
+
+        fidelity = np.array([x[0] for x in results]).reshape(data_array_size)
+        rate = np.array([x[1] for x in results]).reshape(data_array_size)
+
+        return fidelity, rate
+
+    def run(self):
+        sweep_parameter_names = list(self.sweep_parameters.keys())
+        fidelity, rate = self.multiprocess_sweep()
+        data_vars = {"fidelity": (sweep_parameter_names, fidelity), "rate": (sweep_parameter_names, rate)}
+        parameters = copy(self.parameters)
+        for parameter in self.sweep_parameters:
+            parameters.pop(parameter)
+        self.dataset = xr.Dataset(data_vars, self.sweep_parameters, attrs=parameters)
+        if self.save_results:
+            self.save_dataset()
+
+    def save_dataset(self):
+        date_time = self._generate_date_time()
+        file_path = join(self.save_folder, date_time + self.save_name + ".hdf5")
+        # Invalid_netcdf is used to be able to save None and bools as attrs
+        self.dataset.to_netcdf(file_path, engine="h5netcdf", invalid_netcdf=True)
+
+    def save_dataset_fidelity_rate(self):
+        date_time = self._generate_date_time()
+        file_path = join(self.save_folder, f"{date_time}{self.save_name}_fidelity_rate.hdf5")
+        # Invalid_netcdf is used to be able to save None and bools as attrs
+        self.dataset_fidelity_rate.to_netcdf(file_path, engine="h5netcdf", invalid_netcdf=True)
+
+    def _generate_date_time(self):
+        time_stamp = datetime.datetime.now()
+        # time_stamp gives microseconds by default
+        (date_time, micro) = time_stamp.strftime("%Y%m%d-%H%M%S-.%f").split(".")
+        # this ensures the string is formatted correctly as some systems return 0 for micro
+        date_time = f"{date_time}{int(int(micro) / 1000):03d}-"
+        return date_time
+
+    def estimate_sweep_time(self):
+        parameters = copy(self.parameters)
+        for key, values in self.sweep_parameters.items():
+            parameters[key] = values[0]
+        protocol = self.protocol(parameters=parameters)
+        time_start = time.time()
+        protocol.run()
+        time_single = time.time() - time_start
+        par_dimensions = [len(sweep) for sweep in self.sweep_parameters.values()]
+        return time_single * np.prod(par_dimensions)
+
+    def generate_fidelity_rate_curve(self, number_of_rate_points=100, type_axis="lin", rate_range=None):
+        if self.dataset == xr.Dataset():
+            raise RuntimeError("First run the sweep to create a dataset.")
+
+        if rate_range is not None:
+            rmin = rate_range[0]
+            rmax = rate_range[-1]
+        else:
+            rmin = float(self.dataset.rate.min())
+            rmax = float(self.dataset.rate.max())
+        if type_axis == "log":
+            rates = np.geomspace(rmin, rmax, number_of_rate_points)
+        elif type_axis == "lin":
+            rates = np.linspace(rmin, rmax, number_of_rate_points)
+        else:
+            raise ValueError("type_axis should be lin or log")
+
+        fidelities = []
+        for rate in rates:
+            rate_above_bound = self.dataset.fidelity == self.dataset.fidelity.where(self.dataset.rate >= rate).max()
+            fidelity = self.dataset.fidelity.groupby(rate_above_bound)[True][0]  # select only single value
+            for coord in fidelity.coords:
+                if "stacked" in coord:
+                    fidelity = fidelity.reset_coords(coord, drop=True)
+            fidelities.append(fidelity.expand_dims("rate").assign_coords(rate=[rate]))
+        self.dataset_fidelity_rate = xr.combine_by_coords(fidelities).assign_attrs(self.dataset.attrs)
+
+
+def load_dataset(path):
+    return xr.load_dataset(path, engine="h5netcdf")

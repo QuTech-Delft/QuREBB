@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+qutip = "*"
+jupyterlab = "*"
+matplotlib = "*"
+tqdm = "*"
+xarray = "*"
+h5netcdf = "*"
+
+[dev-packages]
+black = "*"
+pylint = "*"
+isort = "*"
+
+[requires]
+python_version = "3.11"

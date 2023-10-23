@@ -1,0 +1,33 @@
+[tool.black]
+line-length = 119
+
+[tool.isort]
+profile = "black"
+src_paths = ["lib"]
+
+[tool.pylint.messages_control]
+disable = [
+    "no-else-return",
+    "too-many-public-methods",
+    "too-few-public-methods",
+    "too-many-arguments",
+    "too-many-instance-attributes",
+    "too-many-statements",
+    "too-many-branches",
+    "too-many-locals",
+    "too-many-lines",
+    "superfluous-parens",
+    "broad-except",
+    "logging-fstring-interpolation",
+    "ungrouped-imports"
+]
+
+[tool.pylint.basic]
+class-rgx = "_?[A-Z][A-Za-z0-9]*(_[A-Za-z0-9]+)*"
+good-names = ['QuREBB','E','L','t','r','l','LBB','PBB','dm','R','T','L','A','B','u','d','I','L_u','L_d','C','DW','QE','NQobj','i','q','Q','g','a','c']
+
+[tool.pylint.format]
+max-line-length = 119
+
+[tool.pylint.similarities]
+min-similarity-lines = 10000
