@@ -52,11 +52,14 @@ The primary strength of our framework is its capability to delineate common feat
 	- The three protocols (A, B, C) from the [QuREBB paper](https://arxiv.org/abs/2310.19878v1) (Figure 7) are implemented in code in this file.
     <img src = "images/3protocols.png" width = "70%"/>
 
+### notebooks
+- **Example notebook.ipynb**
+  - This notebook illustrates the construction of a protocol, exemplified by Protocol C in the referenced document.
+  - It details common imports, the definition of a protocol using building blocks, and the execution of parameter sweeps.
+
 ### tutorial_simulations
-- notebooks
-  - To be filled
-- simulation_data
-  - To be filled
+  - This subdirectory contains the notebooks simulating the three protocols (A, B, C) from the [QuREBB paper](https://arxiv.org/abs/2310.19878v1).
+  
 
 ## Running QuREBB
 [![Pipenv](https://img.shields.io/badge/pipenv-locked-brightgreen)](https://pipenv.pypa.io/)
