@@ -3,7 +3,7 @@
 ![Code Size](https://img.shields.io/github/languages/code-size/QuTech-Delft/QuREBB)
 ![Repo Size](https://img.shields.io/github/repo-size/QuTech-Delft/QuREBB)
 
-Welcome to the **QuREBB** repository! Here, we introduce a modular theoretical framework designed for the comprehensive understanding and comparison of various photon-mediated remote entanglement protocols (REPs). This repository is based on the framework and results outlined in the paper ["Tutorial: Remote entanglement protocols for stationary qubits with photonic interface"](URL_PLACEHOLDER). Structured into four distinct layers, this framework facilitates the assembly of modules by connecting one's output to another's input, elucidating the intricate mechanisms underpinning entanglement.
+Welcome to the **QuREBB** repository! Here, we introduce a modular theoretical framework designed for the comprehensive understanding and comparison of various photon-mediated remote entanglement protocols (REPs). This repository is based on the framework and results outlined in the paper ["Tutorial: Remote entanglement protocols for stationary qubits with photonic interface"](https://arxiv.org/abs/2310.19878v1). Structured into four distinct layers, this framework facilitates the assembly of modules by connecting one's output to another's input, elucidating the intricate mechanisms underpinning entanglement.
 
 The primary strength of our framework is its capability to delineate common features inherent to different remote entanglement protocols. Beyond this, it is designed with adaptability at its core, enabling users to modify modules with precision. This adaptability is crucial to compare a protocol across diverse quantum hardware setups or to test an array of protocols on a consistent hardware foundation. Such modularity and precision often remain elusive in dedicated entanglement simulations tailored for specific experimental setups. Dive deep into the intricacies of photon-mediated entanglement generation between qubit systems, and leverage the robust capabilities of our simulation suite.
 
@@ -11,7 +11,7 @@ The primary strength of our framework is its capability to delineate common feat
 <sup>1</sup> ![QuTech](https://img.shields.io/badge/QuTech-TU_Delft-violet), 
 <sup>2</sup> ![MIT](https://img.shields.io/badge/RLE-MIT-violet)
 
-[**Hans Beukers**](mailto:)<sup>1</sup>, [**Matteo Pasini**](mailto:)<sup>1</sup>, [**Hyeongrak Choi**](mailto:)<sup>2</sup>, [**Dirk Englund**](mailto:englund@mit.edu)<sup>2</sup>, [**Ronald Hanson**](mailto:R.Hanson@tudelft.nl)<sup>1</sup>, [**Johannes Borregaard**](mailto:J.Borregaard@tudelft.nl)<sup>1</sup>
+[**Hans Beukers**](mailto:)<sup>1</sup>, [**Matteo Pasini**](mailto:)<sup>1</sup>, [**Hyeongrak Choi**](mailto:)<sup>2</sup>, [**Dirk Englund**](mailto:englund@mit.edu)<sup>2</sup>, [**Ronald Hanson**](mailto:R.Hanson@tudelft.nl)<sup>1</sup>, [**Johannes Borregaard**](mailto:borregaard@fas.harvard.edu)<sup>1</sup>
 
 
 ## Structure 
@@ -48,7 +48,7 @@ The primary strength of our framework is its capability to delineate common feat
 
 ### protocols
 - **tutorial_protocols.py**
-	- The three protocols (A, B, C) from the [QuREBB paper](URL_PLACEHOLDER) (Figure 7) are implemented in code in this file.
+	- The three protocols (A, B, C) from the [QuREBB paper](https://arxiv.org/abs/2310.19878v1) (Figure 7) are implemented in code in this file.
     <img src = "images/3protocols.png" width = "70%"/>
 
 ### tutorial_simulations
