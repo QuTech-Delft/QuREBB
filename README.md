@@ -9,10 +9,11 @@ The primary strength of our framework is its capability to delineate common feat
 
 ## Authors
 <sup>1</sup> ![QuTech](https://img.shields.io/badge/QuTech-TU_Delft-violet), 
-<sup>2</sup> ![MIT](https://img.shields.io/badge/RLE-MIT-violet)
+<sup>2</sup> ![MIT](https://img.shields.io/badge/RLE-MIT-violet),
 
-[**Hans Beukers**](mailto:)<sup>1</sup>, [**Matteo Pasini**](mailto:)<sup>1</sup>, [**Hyeongrak Choi**](mailto:)<sup>2</sup>, [**Dirk Englund**](mailto:englund@mit.edu)<sup>2</sup>, [**Ronald Hanson**](mailto:R.Hanson@tudelft.nl)<sup>1</sup>, [**Johannes Borregaard**](mailto:borregaard@fas.harvard.edu)<sup>1</sup>
+[**Hans Beukers**](mailto:)<sup>1,\*</sup>, [**Matteo Pasini**](mailto:)<sup>1,\*</sup>, [**Hyeongrak Choi**](mailto:)<sup>2,\*</sup>, [**Dirk Englund**](mailto:englund@mit.edu)<sup>2</sup>, [**Ronald Hanson**](mailto:R.Hanson@tudelft.nl)<sup>1</sup>, [**Johannes Borregaard**](mailto:borregaard@fas.harvard.edu)<sup>1</sup>
 
+<sup>\*</sup> These authors equally contributed to this work.
 
 ## Structure 
 ![GitHub last commit](https://img.shields.io/github/last-commit/QuTech-Delft/QuREBB)
